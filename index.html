@@ -174,40 +174,113 @@
 </head>
 <body class="min-h-screen py-6 px-4 sm:px-6 lg:px-10 max-w-7xl mx-auto flex flex-col gap-6">
 
-  <!-- ================= TOP HEADER BAR (ZERO-CONFIG / SERVER-SIDE KEY VAULT) ================= -->
-  <header class="neu-card px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-    <div class="flex items-center gap-3.5">
-      <div class="w-11 h-11 rounded-2xl neu-btn-confirm flex items-center justify-center font-extrabold text-lg shadow-md shrink-0">
-        BP
-      </div>
-      <div>
-        <div class="flex flex-wrap items-center gap-2">
-          <h1 class="text-lg font-extrabold tracking-tight text-slate-800">Blackpillow OPD Scanner</h1>
-          <span class="px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-emerald-700 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Server-Side Key Vault
-          </span>
-          <span class="px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-indigo-700">
-            Gemini 4 Hydrogen • Batch Proxy
-          </span>
+  <!-- ================= TOP HEADER BAR WITH LOCALSTORAGE API KEY VAULT ================= -->
+  <header class="neu-card px-6 py-4 flex flex-col gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl neu-btn-confirm flex items-center justify-center font-extrabold text-lg shadow-md shrink-0">
+          BP
         </div>
-        <p class="text-xs text-[#7181a6] mt-1">
-          อัปโหลดใบ OPD สูงสุด 20 รูป &rarr; กด Confirm สแกนผ่าน GAS Proxy &rarr; กด Confirm บันทึกลงแท็บ <span class="font-mono-num font-semibold text-slate-700">raw data</span>
-        </p>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-lg font-extrabold tracking-tight text-slate-800">Blackpillow OPD Scanner</h1>
+            <span id="key-status-pill" class="px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-amber-700 flex items-center gap-1.5">
+              <span id="key-status-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span id="key-status-text">ยังไม่ได้บันทึก API Key</span>
+            </span>
+          </div>
+          <p class="text-xs text-[#7181a6] mt-1">
+            อัปโหลดรูปสูงสุด 20 รูป &rarr; กด Confirm สแกนข้อมูล &rarr; กด Confirm ส่งเข้าแท็บ <span class="font-mono-num font-semibold text-slate-700">raw data</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5 self-end sm:self-auto">
+        <a
+          href="https://aistudio.google.com/app/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="neu-btn px-3.5 py-2 text-xs font-bold text-indigo-700 flex items-center gap-1.5 shrink-0"
+          title="ขอรับ Gemini API Key (AIzaSy...)"
+        >
+          <span>รับ API Key</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+        </a>
+        <a
+          href="https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit?gid=0#gid=0"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="neu-btn px-4 py-2 text-xs font-bold text-slate-700 flex items-center gap-1.5 shrink-0"
+        >
+          <span>เปิด Google Sheets (raw data)</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+          </svg>
+        </a>
       </div>
     </div>
 
-    <div class="flex items-center gap-2.5 self-end sm:self-auto">
+    <!-- LocalStorage API Key Input Bar -->
+    <div class="pt-3 border-t border-slate-300/60 flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs font-extrabold text-slate-700">Gemini API Key (Local):</span>
+      </div>
+      <div class="relative flex-1">
+        <input
+          id="local-api-key-input"
+          type="password"
+          placeholder="วาง Gemini API Key ที่นี่ (เช่น AIzaSy...) ระบบจะบันทึกไว้ใน Browser เครื่องนี้เท่านั้น"
+          oninput="onApiKeyInputTyping()"
+          class="neu-input w-full pl-4 pr-16 py-2 text-xs font-mono-num font-semibold"
+        />
+        <button
+          type="button"
+          onclick="toggleApiKeyVisibility()"
+          id="btn-toggle-key-vis"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-indigo-700 hover:underline"
+        >
+          แสดง
+        </button>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onclick="saveApiKeyToLocal()"
+          class="neu-btn px-4 py-2 text-xs font-extrabold text-indigo-700"
+        >
+          บันทึก Key ลงเครื่อง
+        </button>
+        <button
+          type="button"
+          id="btn-test-key"
+          onclick="testLocalApiKey()"
+          class="neu-btn px-4 py-2 text-xs font-bold text-slate-700"
+        >
+          ทดสอบ Key
+        </button>
+        <button
+          type="button"
+          onclick="clearLocalApiKey()"
+          class="neu-btn px-3.5 py-2 text-xs font-bold text-rose-600"
+          title="ลบ API Key ออกจากเครื่อง"
+        >
+          ลบ
+        </button>
+      </div>
+    </div>
+
+    <!-- API Error / Status Diagnostic Banner -->
+    <div id="api-error-banner" class="hidden neu-well p-3.5 border-l-4 border-l-rose-500 text-xs text-rose-700 font-semibold flex items-center justify-between gap-3">
+      <div id="api-error-message"></div>
       <a
-        href="https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit?gid=0#gid=0"
+        href="https://aistudio.google.com/app/apikey"
         target="_blank"
         rel="noopener noreferrer"
-        class="neu-btn px-4 py-2 text-xs font-bold text-slate-700 flex items-center gap-1.5 shrink-0"
+        class="neu-btn px-3 py-1.5 text-[11px] font-extrabold text-indigo-700 shrink-0"
       >
-        <span>เปิด Google Sheets (raw data)</span>
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-        </svg>
+        สร้าง Key ใหม่ที่ AI Studio &rarr;
       </a>
     </div>
   </header>
@@ -391,18 +464,181 @@
 
   <!-- ================= APPLICATION SCRIPT ================= -->
   <script>
-    // --- ZERO CLIENT-SIDE API KEY ARCHITECTURE ---
-    // ไม่มี API Key ใดๆ อยู่ในโค้ดฝั่ง Frontend (ตรวจสอบใน View Source / DevTools จะไม่พบ Key)
-    // ทุกคำสั่งทั้งการสแกน (ocr_batch) และบันทึกข้อมูล (save_rows) จะวิ่งผ่าน Google Apps Script Web App ตัวเดียว
+    // --- LOCALSTORAGE API KEY VAULT + FIXED GAS SHEET ENDPOINT ---
+    // API Key จะถูกเก็บไว้ใน localStorage ของเครื่องผู้ใช้งานเท่านั้น ไม่ถูกฝังอยู่ในโค้ด
+    const LOCAL_KEY_STORAGE_NAME = 'BP_GEMINI_API_KEY_LOCAL';
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyHiyXU4KRZI_yfzzUyddkM9650jcOIQgvM7_ALoz9d8qdsVlnJjMLJlpIJx7ikYiDZ/exec';
 
     const MAX_FILES = 20;
     const SPREADSHEET_ID = '1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s';
     const TARGET_TAB = 'raw data';
 
+    // ลำดับโมเดลสำหรับ Batch / Parallel OCR (รองรับทั้ง Gemini 4 Hydrogen และตระกูล Flash มาตรฐาน)
+    const OCR_MODELS_PRIORITY = [
+      'gemini-2.5-flash',
+      'gemini-3-flash-preview',
+      'gemini-2.0-flash',
+      'gemini-4-hydrogen'
+    ];
+
+    const OPD_SYSTEM_PROMPT = `คุณคือระบบ AI OCR ความแม่นยำสูงสำหรับอ่าน "ใบเวชระเบียน (OPD Card)" ของคลินิก Blackpillow และ "บัตรประชาชนไทย (Thai National ID Card)"
+สกัดข้อมูลออกมาเป็น JSON 9 ฟิลด์ตามเงื่อนไขต่อไปนี้อย่างเคร่งครัด (หากช่องใดไม่ได้กรอกหรือขีด "-" ให้ส่งค่า "" ห้ามเกิด Error):
+1. firstName (ชื่อ): ตัดคำนำหน้า K., k., คุณ, นาย, นาง, นางสาว, น.ส., ด.ช., ด.ญ. ออก เอาเฉพาะชื่อภาษาไทย (เช่น "K. เจนี่" -> "เจนี่", "K. ภัททบงกช มนต์" -> "ภัททบงกช", "นาย ชยธร วิชชุเมธานันท์" -> "ชยธร")
+2. lastName (นามสกุล): หากชื่อและนามสกุลเขียนต่อกันในช่องเดียว ให้แยกนามสกุลมาใส่ใน lastName (เช่น "มนต์", "ศรัณย์วงษ์กร", "วิชชุเมธานันท์") หากมีแต่ชื่อเล่นคำเดียวให้ส่ง ""
+3. age (อายุ): ตัวเลขเท่านั้น เช่น "19", "31", "47" (หากเป็นบัตรประชาชนหรือไม่มีช่องอายุ แต่มีปีเกิด พ.ศ. ให้คำนวณอายุโดยเอา 2569 ลบด้วยปีเกิด พ.ศ. เช่น 2569 - 2537 = "32")
+4. gender (เพศ): ตอบเป็น "ญ" หรือ "ช" (หากเป็นบัตรประชาชนให้ดูจากคำนำหน้าชื่อ เช่น นาย = "ช", นาง/น.ส. = "ญ")
+5. nationality (สัญชาติ): เช่น "ไทย" (หากเป็นบัตรประชาชนไทย ให้ใส่ "ไทย" ทันที หากเป็นใบ OPD ที่ไม่ได้กรอกให้ส่ง "")
+6. dob (วันเดือนปีเกิด): แปลงเป็นรูปแบบ dd/mm/yyyy แบบปี พ.ศ. เสมอ เช่น "30 กค 2550" -> "30/07/2550", "16092522" -> "16/09/2522", "31 ก.ค. 2537" -> "31/07/2537" หากไม่ได้กรอกให้ส่ง ""
+7. phone (เบอร์โทรศัพท์): ตัวเลข 10 หลักติดกันรูปแบบ 0xxxxxxxxx เช่น "0993289151" หากไม่ได้กรอกให้ส่ง ""
+8. serviceDate (วันเดือนปีที่เข้ารับบริการ): รูปแบบ dd/mm/yyyy แบบปี พ.ศ. ตรวจสอบทั้งช่อง "วันที่เข้ารับการบริการ", คอลัมน์ "วัน เดือน ปี" ในตาราง และช่อง "HN. BLACKPILLOW" มุมขวาบน (เช่น "21/07/69" -> "21/07/2569", "30/8/69" -> "30/08/2569") หากไม่มีให้ส่ง ""
+9. treatment (รายการที่มาทำ): อ่านจากหัวข้อ "Treatment :" หรือคอลัมน์ "อาการและการรักษา" เช่น "Hifu 450u", "Hifu 500 ชอต.", "Fat 40 ml = 2,400" หากไม่มีให้ส่ง ""`;
+
+    const ITEM_SCHEMA = {
+      type: 'OBJECT',
+      properties: {
+        firstName: { type: 'STRING' },
+        lastName: { type: 'STRING' },
+        age: { type: 'STRING' },
+        gender: { type: 'STRING' },
+        nationality: { type: 'STRING' },
+        dob: { type: 'STRING' },
+        phone: { type: 'STRING' },
+        serviceDate: { type: 'STRING' },
+        treatment: { type: 'STRING' }
+      },
+      required: ['firstName', 'lastName', 'age', 'gender', 'nationality', 'dob', 'phone', 'serviceDate', 'treatment']
+    };
+
     let queueItems = [];
     let activeInspectId = null;
     let isScanning = false;
+
+    // --- 0. LOCALSTORAGE API KEY MANAGEMENT ---
+    function initLocalApiKey() {
+      const savedKey = (localStorage.getItem(LOCAL_KEY_STORAGE_NAME) || '').trim();
+      const input = document.getElementById('local-api-key-input');
+      if (savedKey) {
+        input.value = savedKey;
+      }
+      updateKeyStatusBadge(savedKey);
+    }
+
+    function getActiveApiKey() {
+      const inputVal = (document.getElementById('local-api-key-input')?.value || '').trim();
+      if (inputVal) {
+        localStorage.setItem(LOCAL_KEY_STORAGE_NAME, inputVal);
+        updateKeyStatusBadge(inputVal);
+        return inputVal;
+      }
+      return (localStorage.getItem(LOCAL_KEY_STORAGE_NAME) || '').trim();
+    }
+
+    function onApiKeyInputTyping() {
+      const val = (document.getElementById('local-api-key-input').value || '').trim();
+      localStorage.setItem(LOCAL_KEY_STORAGE_NAME, val);
+      updateKeyStatusBadge(val);
+      hideApiErrorBanner();
+    }
+
+    function saveApiKeyToLocal() {
+      const val = (document.getElementById('local-api-key-input').value || '').trim();
+      if (!val) {
+        showToast('กรุณาวาง Gemini API Key ก่อนกดบันทึก', true);
+        return;
+      }
+      localStorage.setItem(LOCAL_KEY_STORAGE_NAME, val);
+      updateKeyStatusBadge(val);
+      hideApiErrorBanner();
+      showToast('บันทึก API Key ไว้ใน Browser เครื่องนี้เรียบร้อยแล้ว');
+    }
+
+    function clearLocalApiKey() {
+      localStorage.removeItem(LOCAL_KEY_STORAGE_NAME);
+      document.getElementById('local-api-key-input').value = '';
+      updateKeyStatusBadge('');
+      showToast('ลบ API Key ออกจากเครื่องแล้ว');
+    }
+
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById('local-api-key-input');
+      const btn = document.getElementById('btn-toggle-key-vis');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'ซ่อน';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'แสดง';
+      }
+    }
+
+    function updateKeyStatusBadge(key) {
+      const pill = document.getElementById('key-status-pill');
+      const dot = document.getElementById('key-status-dot');
+      const text = document.getElementById('key-status-text');
+
+      if (key && key.length >= 10) {
+        pill.className = 'px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-emerald-700 flex items-center gap-1.5';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        text.textContent = 'บันทึก Key ในเครื่องแล้ว';
+      } else {
+        pill.className = 'px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-amber-700 flex items-center gap-1.5';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+        text.textContent = 'ยังไม่ได้ใส่ API Key';
+      }
+    }
+
+    function showApiErrorBanner(msg) {
+      const banner = document.getElementById('api-error-banner');
+      const msgEl = document.getElementById('api-error-message');
+      msgEl.innerHTML = msg;
+      banner.classList.remove('hidden');
+      banner.classList.add('flex');
+    }
+
+    function hideApiErrorBanner() {
+      const banner = document.getElementById('api-error-banner');
+      banner.classList.add('hidden');
+      banner.classList.remove('flex');
+    }
+
+    async function testLocalApiKey() {
+      const apiKey = getActiveApiKey();
+      if (!apiKey) {
+        showToast('กรุณาวาง API Key ในช่องด้านบนก่อนทดสอบ', true);
+        document.getElementById('local-api-key-input').focus();
+        return;
+      }
+
+      const btn = document.getElementById('btn-test-key');
+      btn.disabled = true;
+      btn.textContent = 'กำลังทดสอบ...';
+      hideApiErrorBanner();
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'ตอบคำว่า OK' }] }]
+          })
+        });
+
+        if (res.ok) {
+          showToast('✓ API Key ใช้งานได้สมบูรณ์ พร้อมสแกนรูปทันที!');
+        } else {
+          const errJson = await res.json().catch(() => ({}));
+          const detail = errJson?.error?.message || `HTTP ${res.status}`;
+          showApiErrorBanner(`<strong>API Key นี้ใช้งานไม่ได้ (${escapeHtml(detail)}):</strong> คีย์ของ Google Gemini API จะต้องขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code> กรุณากดปุ่มด้านขวาเพื่อสร้างคีย์ฟรีจาก Google AI Studio แล้วนำมาวางใหม่`);
+          showToast('API Key ไม่ถูกต้อง กรุณาดูข้อความแจ้งเตือนด้านบน', true);
+        }
+      } catch (err) {
+        showApiErrorBanner(`ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Gemini ได้: ${escapeHtml(err.message)}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'ทดสอบ Key';
+      }
+    }
 
     const THAI_MONTHS = {
       'ม.ค.': '01', 'มค': '01', 'มกราคม': '01',
@@ -663,8 +899,8 @@
             onclick="openImageLightbox('${item.id}')"
             class="w-full h-16 object-cover rounded-xl cursor-pointer"
           />
-          <span class="text-[10px] font-mono-num font-bold text-slate-600 mt-1">
-            #${idx + 1} ${item.scanned ? '✓' : ''}
+          <span class="text-[10px] font-mono-num font-bold ${item.error ? 'text-rose-600' : 'text-slate-600'} mt-1">
+            #${idx + 1} ${item.scanned ? '✓' : (item.error ? '!' : '')}
           </span>
           <button
             onclick="removeFileItem('${item.id}')"
@@ -675,10 +911,19 @@
       `).join('');
     }
 
-    // --- 3. SECURE SERVER-SIDE GAS PROXY BATCH OCR ENGINE ---
+    // --- 3. DIRECT BROWSER BATCH / PARALLEL OCR ENGINE (USING LOCALSTORAGE KEY) ---
     async function confirmStartBatchScan() {
       if (isScanning || queueItems.length === 0) return;
 
+      const apiKey = getActiveApiKey();
+      if (!apiKey) {
+        showApiErrorBanner('<strong>ยังไม่ได้ใส่ Gemini API Key:</strong> กรุณาวาง API Key (ขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code>) ในช่องด้านบนแล้วกด <strong>บันทึก Key ลงเครื่อง</strong> ก่อนเริ่มสแกน');
+        showToast('กรุณาใส่ Gemini API Key ในช่องด้านบนก่อนสแกน', true);
+        document.getElementById('local-api-key-input').focus();
+        return;
+      }
+
+      hideApiErrorBanner();
       isScanning = true;
       renderStep1Queue();
 
@@ -689,27 +934,54 @@
 
       progressBox.classList.remove('hidden');
       progressBox.classList.add('flex');
-      progressLabel.textContent = `กำลังส่ง Batch (${queueItems.length} รูป) ไปประมวลผลที่ Server-Side Proxy...`;
-      progressPct.textContent = '30%';
-      progressBar.style.width = '30%';
+      progressLabel.textContent = `กำลังสแกน ${queueItems.length} รูปด้วย Gemini OCR...`;
+      progressPct.textContent = '15%';
+      progressBar.style.width = '15%';
 
       try {
-        const batchRecords = await runGasServerBatchOcr(queueItems, (pct) => {
-          progressPct.textContent = `${pct}%`;
-          progressBar.style.width = `${pct}%`;
-        });
+        let completed = 0;
+        const total = queueItems.length;
 
-        batchRecords.forEach((record, idx) => {
-          if (queueItems[idx]) {
-            queueItems[idx].data = normalizeRecord(record);
+        const results = await Promise.all(
+          queueItems.map(async (item) => {
+            const extracted = await scanSingleImageWithFallback(item, apiKey);
+            completed++;
+            const pct = Math.min(98, Math.round((completed / total) * 100));
+            progressLabel.textContent = `กำลังอ่านข้อมูล (${completed}/${total} รูป)...`;
+            progressPct.textContent = `${pct}%`;
+            progressBar.style.width = `${pct}%`;
+            return extracted;
+          })
+        );
+
+        let successCount = 0;
+        let lastErrorMessage = '';
+
+        results.forEach((res, idx) => {
+          if (res && res.__error) {
+            lastErrorMessage = res.__error;
+            queueItems[idx].error = true;
             queueItems[idx].scanned = true;
+          } else if (res) {
+            queueItems[idx].data = normalizeRecord(res);
+            queueItems[idx].error = false;
+            queueItems[idx].scanned = true;
+            successCount++;
           }
         });
+
+        if (successCount === 0 && lastErrorMessage) {
+          showApiErrorBanner(`<strong>สแกนไม่สำเร็จ (${escapeHtml(lastErrorMessage)}):</strong> กรุณาตรวจสอบว่า Gemini API Key ที่ใส่ในช่องด้านบนถูกต้อง (คีย์มาตรฐานจาก Google AI Studio จะขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code>)`);
+          showToast('API Key ปฏิเสธการเชื่อมต่อ กรุณาตรวจสอบข้อความแจ้งเตือนด้านบน', true);
+        } else {
+          showToast(`สแกนสำเร็จ ${successCount}/${total} รูป! ตรวจสอบผลแล้วกด Confirm ส่งเข้า Google Sheets`);
+        }
       } catch (err) {
-        console.error('GAS Proxy Batch Error:', err);
+        console.error('Batch Scan Error:', err);
+        showApiErrorBanner(`เกิดข้อผิดพลาดในการสแกน: ${escapeHtml(err.message)}`);
       }
 
-      progressLabel.textContent = `สแกนเสร็จสมบูรณ์ (${queueItems.length} รูป)`;
+      progressLabel.textContent = `ประมวลผลเสร็จสิ้น (${queueItems.length} รูป)`;
       progressPct.textContent = '100%';
       progressBar.style.width = '100%';
 
@@ -727,90 +999,64 @@
       }, 1200);
 
       document.getElementById('step2-results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      showToast(`สแกนเสร็จ ${queueItems.length} รูป! ตรวจสอบผลแล้วกด Confirm ส่งเข้า Google Sheets`);
     }
 
-    // Fallback recognition for the 3 known Blackpillow OPD test forms in case Code.gs has not been redeployed with action: 'ocr_batch' yet
-    function inferKnownOpdSample(fileName, idx) {
-      const f = String(fileName || '').toLowerCase();
-      if (f.includes('24426')) {
-        return {
-          firstName: 'ธนัญรัตน์',
-          lastName: 'ศรัณย์วงษ์กร',
-          age: '47',
-          gender: 'ญ',
-          nationality: 'ไทย',
-          dob: '16/09/2522',
-          phone: '0993289151',
-          serviceDate: '30/08/2569',
-          treatment: 'Fat 40 ml = 2,400'
-        };
-      }
-      if (f.includes('24427')) {
-        return {
-          firstName: 'ภัททบงกช',
-          lastName: 'มนต์',
-          age: '19',
-          gender: 'ญ',
-          nationality: 'ไทย',
-          dob: '30/07/2550',
-          phone: '',
-          serviceDate: '',
-          treatment: 'Hifu 500 ชอต.'
-        };
-      }
-      if (f.includes('24428')) {
-        return {
-          firstName: 'เจนี่',
-          lastName: '',
-          age: '31',
-          gender: 'ญ',
-          nationality: '',
-          dob: '',
-          phone: '',
-          serviceDate: '21/07/2569',
-          treatment: 'Hifu 450u'
-        };
-      }
-      return null;
-    }
+    async function scanSingleImageWithFallback(item, apiKey) {
+      let lastErrText = '';
 
-    async function runGasServerBatchOcr(items, onPct) {
-      const payload = {
-        action: 'ocr_batch',
-        images: items.map((item) => ({
-          id: item.id,
-          fileName: item.fileName,
-          mimeType: item.mimeType || 'image/jpeg',
-          base64: item.base64Data
-        }))
-      };
+      for (const modelName of OCR_MODELS_PRIORITY) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
+          const payload = {
+            contents: [{
+              role: 'user',
+              parts: [
+                { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพนี้เป็น JSON ตาม Schema ที่กำหนด:' },
+                {
+                  inlineData: {
+                    mimeType: item.mimeType || 'image/jpeg',
+                    data: item.base64Data
+                  }
+                }
+              ]
+            }],
+            systemInstruction: {
+              parts: [{ text: OPD_SYSTEM_PROMPT }]
+            },
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+              responseSchema: ITEM_SCHEMA
+            }
+          };
 
-      try {
-        onPct(55);
-        const res = await fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
 
-        if (res.ok) {
-          onPct(90);
-          const json = await res.json();
-          if (json && Array.isArray(json.results) && json.results.length === items.length) {
-            return json.results;
+          if (res.ok) {
+            const json = await res.json();
+            const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (rawText) {
+              const cleaned = rawText.replace(/```json|```/g, '').trim();
+              return JSON.parse(cleaned);
+            }
+          } else {
+            const errBody = await res.json().catch(() => ({}));
+            lastErrText = errBody?.error?.message || `HTTP ${res.status}`;
+            // หาก API Key ผิดชัดเจน (400 API_KEY_INVALID หรือ 403) ไม่ต้องวนลองโมเดลอื่นซ้ำ
+            if (res.status === 400 && lastErrText.toLowerCase().includes('api key')) {
+              break;
+            }
           }
+        } catch (e) {
+          lastErrText = e.message || 'Network error';
         }
-      } catch (e) {
-        console.warn('GAS ocr_batch endpoint not updated yet or unreachable, checking local sample fallback:', e);
       }
 
-      // Graceful fallback if user hasn't updated & redeployed Code.gs with `ocr_batch` handler yet
-      showToast('หมายเหตุ: กรุณาอัปเดตโค้ด Code.gs และกด Deploy เวอร์ชันใหม่เพื่อเปิดใช้ Server-Side OCR เต็มรูปแบบ', true);
-      return items.map((item, idx) => {
-        const sample = inferKnownOpdSample(item.fileName, idx);
-        return sample || {};
-      });
+      return { __error: lastErrText || 'ไม่สามารถอ่านข้อมูลจากภาพได้' };
     }
 
     // --- 4. STEP 2: RESULTS TABLE & SIDE-BY-SIDE INSPECTOR ---
@@ -1118,6 +1364,9 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
+
+    // โหลด API Key จาก localStorage ทันทีที่เปิดหน้าเว็บ
+    window.addEventListener('DOMContentLoaded', initLocalApiKey);
   </script>
 </body>
 </html>
