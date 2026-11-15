@@ -174,7 +174,7 @@
 </head>
 <body class="min-h-screen py-6 px-4 sm:px-6 lg:px-10 max-w-7xl mx-auto flex flex-col gap-6">
 
-  <!-- ================= TOP HEADER BAR (NO DOCS / NO CLUTTER) ================= -->
+  <!-- ================= TOP HEADER BAR ================= -->
   <header class="neu-card px-6 py-4 flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-3.5">
       <div class="w-11 h-11 rounded-2xl neu-btn-confirm flex items-center justify-center font-extrabold text-lg shadow-md shrink-0">
@@ -190,6 +190,16 @@
     </div>
 
     <div class="flex items-center gap-2.5">
+      <button
+        id="btn-api-key-status"
+        onclick="openApiKeyModal()"
+        class="neu-btn px-4 py-2 text-xs font-bold text-slate-700 flex items-center gap-2"
+        title="ตั้งค่า Gemini API Key (บันทึกในเครื่องครั้งเดียว ไม่ฝังในโค้ด)"
+      >
+        <span id="api-key-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span id="api-key-label">ตั้งค่า API Key</span>
+      </button>
+
       <button
         id="btn-header-clear"
         onclick="clearAllFiles()"
@@ -253,7 +263,7 @@
     <!-- Batch Scan Progress Bar -->
     <div id="scan-progress-box" class="hidden flex-col gap-1.5">
       <div class="flex items-center justify-between text-xs font-mono-num">
-        <span id="scan-progress-label" class="font-bold text-indigo-700">กำลังประมวลผล Batch OCR (Gemini 4 Hydrogen)...</span>
+        <span id="scan-progress-label" class="font-bold text-indigo-700">กำลังประมวลผล Batch OCR...</span>
         <span id="scan-progress-pct" class="font-bold text-slate-700">0%</span>
       </div>
       <div class="w-full h-3 rounded-full neu-well p-0.5 overflow-hidden">
@@ -356,6 +366,47 @@
     </div>
   </section>
 
+  <!-- ================= ONE-TIME API KEY MODAL (SAVED IN LOCALSTORAGE) ================= -->
+  <div id="api-key-modal" onclick="closeApiKeyModal()" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div onclick="event.stopPropagation()" class="neu-card p-6 max-w-md w-full flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-extrabold text-slate-800">ตั้งค่า Gemini API Key (บันทึกในเครื่องครั้งเดียว)</h3>
+        <button onclick="closeApiKeyModal()" class="neu-btn w-8 h-8 text-xs font-extrabold">✕</button>
+      </div>
+      <p class="text-xs text-[#7181a6] leading-relaxed">
+        คีย์ของคุณจะถูกบันทึกไว้ในเบราว์เซอร์ของเครื่องนี้เท่านั้น (<code class="font-mono-num">localStorage</code>) <strong>ไม่ถูกฝังลงในโค้ดสาธารณะบน GitHub</strong> และไม่ต้องกรอกใหม่เมื่อเปิดเว็บครั้งต่อไป
+      </p>
+      <input
+        id="api-key-input"
+        type="password"
+        placeholder="วาง Gemini API Key ที่นี่..."
+        class="neu-input w-full px-4 py-3 text-xs font-mono-num font-bold"
+      />
+      <div class="flex items-center justify-between gap-2 pt-1">
+        <button
+          onclick="clearSavedApiKey()"
+          class="neu-btn px-4 py-2.5 text-xs font-bold text-rose-600"
+        >
+          ลบคีย์ที่จำไว้
+        </button>
+        <div class="flex items-center gap-2">
+          <button
+            onclick="closeApiKeyModal()"
+            class="neu-btn px-4 py-2.5 text-xs font-bold text-slate-600"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onclick="saveApiKeyFromModal()"
+            class="neu-btn-confirm px-6 py-2.5 text-xs font-extrabold"
+          >
+            บันทึกคีย์ไว้ในเครื่อง
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= FULLSCREEN IMAGE ZOOM MODAL ================= -->
   <div id="image-lightbox-modal" onclick="closeImageLightbox()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
     <div onclick="event.stopPropagation()" class="neu-card p-4 max-w-3xl w-full flex flex-col gap-3">
@@ -379,10 +430,10 @@
 
   <!-- ================= APPLICATION SCRIPT ================= -->
   <script>
-    // --- HARDCODED ZERO-CONFIG CREDENTIALS & ENDPOINTS ---
+    // --- SECURE CREDENTIALS & ENDPOINTS (NO HARDCODED SECRET IN CODE) ---
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyHiyXU4KRZI_yfzzUyddkM9650jcOIQgvM7_ALoz9d8qdsVlnJjMLJlpIJx7ikYiDZ/exec';
-    const GEMINI_API_KEY = 'AQ.Ab8RN6K-_SCDqNUNQuLC2ktPlB0Sou7DEyonL91Uj1qzpqC6zA';
-    const GEMINI_MODEL = 'gemini-4-hydrogen';
+    const STORAGE_KEY_GEMINI = 'bp_gemini_api_key_v1';
+    const GEMINI_MODEL = 'gemini-2.5-flash';
     const FALLBACK_MODELS = ['gemini-4-hydrogen', 'gemini-2.5-flash', 'gemini-3-flash-preview', 'gemini-2.5-flash-preview-09-2025'];
 
     const MAX_FILES = 20;
@@ -392,6 +443,78 @@
     let queueItems = [];
     let activeInspectId = null;
     let isScanning = false;
+    let pendingScanAfterKeySave = false;
+    let serverProxyAvailable = null; // null = unknown, true = Vercel /api/gemini configured, false = use browser key
+
+    function getSavedApiKey() {
+      try {
+        return (localStorage.getItem(STORAGE_KEY_GEMINI) || '').trim();
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function updateApiKeyBadge() {
+      const dot = document.getElementById('api-key-dot');
+      const label = document.getElementById('api-key-label');
+      const hasKey = Boolean(getSavedApiKey());
+
+      if (serverProxyAvailable === true) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        label.textContent = 'API Key (เชื่อมต่อผ่านเซิร์ฟเวอร์)';
+      } else if (hasKey) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        label.textContent = 'API Key (บันทึกในเครื่องแล้ว)';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+        label.textContent = 'ตั้งค่า API Key (ครั้งเดียว)';
+      }
+    }
+
+    function openApiKeyModal(autoResumeScan = false) {
+      pendingScanAfterKeySave = Boolean(autoResumeScan);
+      const modal = document.getElementById('api-key-modal');
+      const input = document.getElementById('api-key-input');
+      input.value = getSavedApiKey();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => input.focus(), 50);
+    }
+
+    function closeApiKeyModal() {
+      pendingScanAfterKeySave = false;
+      const modal = document.getElementById('api-key-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function saveApiKeyFromModal() {
+      const input = document.getElementById('api-key-input');
+      const val = (input.value || '').trim();
+      if (!val) {
+        showToast('กรุณาวาง Gemini API Key ก่อนกดบันทึก', true);
+        return;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY_GEMINI, val);
+      } catch (_) {}
+      const shouldResume = pendingScanAfterKeySave;
+      closeApiKeyModal();
+      updateApiKeyBadge();
+      showToast('บันทึก API Key ไว้ในเบราว์เซอร์เรียบร้อย (ไม่ต้องกรอกใหม่ในครั้งถัดไป)');
+      if (shouldResume && queueItems.length > 0 && !isScanning) {
+        confirmStartBatchScan();
+      }
+    }
+
+    function clearSavedApiKey() {
+      try {
+        localStorage.removeItem(STORAGE_KEY_GEMINI);
+      } catch (_) {}
+      document.getElementById('api-key-input').value = '';
+      updateApiKeyBadge();
+      showToast('ลบ API Key ออกจากเบราว์เซอร์แล้ว', true);
+    }
 
     const THAI_MONTHS = {
       'ม.ค.': '01', 'มค': '01', 'มกราคม': '01',
@@ -691,9 +814,75 @@
       `).join('');
     }
 
-    // --- 3. GEMINI 4 HYDROGEN BATCH OCR ENGINE ---
+    // --- 3. HYBRID GEMINI OCR CALLER (SERVERLESS PROXY OR SAVED LOCALSTORAGE KEY) ---
+    async function callGeminiEndpoint(mode, model, payload) {
+      // 1) Try Vercel Serverless Proxy (/api/gemini) first when hosted on HTTP(S)
+      if (location.protocol.startsWith('http') && serverProxyAvailable !== false) {
+        try {
+          const proxyRes = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode, model, payload })
+          });
+          if (proxyRes.ok) {
+            serverProxyAvailable = true;
+            updateApiKeyBadge();
+            return await proxyRes.json();
+          }
+          if (proxyRes.status === 404 || proxyRes.status === 501) {
+            serverProxyAvailable = false;
+            updateApiKeyBadge();
+          }
+        } catch (_) {
+          serverProxyAvailable = false;
+        }
+      }
+
+      // 2) Fallback to browser localStorage key
+      const apiKey = getSavedApiKey();
+      const action = mode === 'batch' ? 'batchGenerateContent' : 'generateContent';
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${action}?key=${encodeURIComponent(apiKey)}`;
+      const directRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!directRes.ok) {
+        throw new Error(`HTTP ${directRes.status}`);
+      }
+      return await directRes.json();
+    }
+
     async function confirmStartBatchScan() {
       if (isScanning || queueItems.length === 0) return;
+
+      // Check if we have either a server proxy or a saved localStorage key
+      if (!getSavedApiKey() && serverProxyAvailable !== true) {
+        // Quick probe if hosted on http/https and proxy not tested yet
+        if (location.protocol.startsWith('http') && serverProxyAvailable === null) {
+          try {
+            const probe = await fetch('/api/gemini', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ mode: 'single', model: GEMINI_MODEL, payload: {} })
+            });
+            if (probe.status !== 404 && probe.status !== 501) {
+              serverProxyAvailable = true;
+              updateApiKeyBadge();
+            } else {
+              serverProxyAvailable = false;
+            }
+          } catch (_) {
+            serverProxyAvailable = false;
+          }
+        }
+
+        if (!getSavedApiKey() && serverProxyAvailable !== true) {
+          openApiKeyModal(true);
+          showToast('กรุณาใส่ Gemini API Key ครั้งแรก (ระบบจะจำไว้ในเครื่องให้อัตโนมัติ)', true);
+          return;
+        }
+      }
 
       isScanning = true;
       renderStep1Queue();
@@ -705,13 +894,12 @@
 
       progressBox.classList.remove('hidden');
       progressBox.classList.add('flex');
-      progressLabel.textContent = `กำลังส่ง Batch Request (${queueItems.length} รูป) ไปยัง ${GEMINI_MODEL}...`;
+      progressLabel.textContent = `กำลังส่ง Batch Request (${queueItems.length} รูป)...`;
       progressPct.textContent = '25%';
       progressBar.style.width = '25%';
 
       try {
-        // Attempt 1: True Batch Mode (via Code.gs proxy if configured, or direct batchGenerateContent)
-        const batchRecords = await runGemini4HydrogenBatch(queueItems, (doneCount) => {
+        const batchRecords = await runGeminiBatch(queueItems, (doneCount) => {
           const pct = Math.min(95, Math.round((doneCount / queueItems.length) * 100));
           progressPct.textContent = `${pct}%`;
           progressBar.style.width = `${pct}%`;
@@ -748,49 +936,40 @@
       showToast(`สแกนเสร็จ ${queueItems.length} รูป! ตรวจสอบข้อมูลแล้วกด Confirm ส่งเข้า Google Sheets`);
     }
 
-    async function runGemini4HydrogenBatch(items, onProgress) {
-      // Build standard Gemini Batch requests payload
-      const buildBatchPayload = (modelName) => items.map((item) => ({
-        model: `models/${modelName}`,
-        contents: [{
-          role: 'user',
-          parts: [
-            { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพใบ OPD นี้เป็น JSON:' },
-            { inlineData: { mimeType: item.mimeType || 'image/jpeg', data: item.base64Data } }
-          ]
-        }],
-        systemInstruction: { parts: [{ text: OPD_SYSTEM_PROMPT }] },
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: SINGLE_ITEM_SCHEMA
-        }
-      }));
+    async function runGeminiBatch(items, onProgress) {
+      const buildBatchPayload = (modelName) => ({
+        requests: items.map((item) => ({
+          model: `models/${modelName}`,
+          contents: [{
+            role: 'user',
+            parts: [
+              { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพใบ OPD นี้เป็น JSON:' },
+              { inlineData: { mimeType: item.mimeType || 'image/jpeg', data: item.base64Data } }
+            ]
+          }],
+          systemInstruction: { parts: [{ text: OPD_SYSTEM_PROMPT }] },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: SINGLE_ITEM_SCHEMA
+          }
+        }))
+      });
 
-      // 1A. Try Gemini 4 Hydrogen batchGenerateContent, then fallback to gemini-2.5-flash:batchGenerateContent
-      const batchModels = ['gemini-4-hydrogen', 'gemini-2.5-flash'];
-      for (const batchModel of batchModels) {
+      // 1A. Try batchGenerateContent
+      for (const batchModel of ['gemini-2.5-flash', 'gemini-4-hydrogen']) {
         try {
-          const batchUrl = `https://generativelanguage.googleapis.com/v1beta/models/${batchModel}:batchGenerateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
-          const directRes = await fetch(batchUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requests: buildBatchPayload(batchModel) })
-          });
-
-          if (directRes.ok) {
-            const batchJson = await directRes.json();
-            if (Array.isArray(batchJson.responses) && batchJson.responses.length === items.length) {
-              onProgress(items.length);
-              return batchJson.responses.map((r) => {
-                const txt = r?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                return JSON.parse(txt.replace(/```json|```/g, '').trim());
-              });
-            }
+          const batchJson = await callGeminiEndpoint('batch', batchModel, buildBatchPayload(batchModel));
+          if (Array.isArray(batchJson.responses) && batchJson.responses.length === items.length) {
+            onProgress(items.length);
+            return batchJson.responses.map((r) => {
+              const txt = r?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+              return JSON.parse(txt.replace(/```json|```/g, '').trim());
+            });
           }
         } catch (_) {}
       }
 
-      // 1B. Try Multi-Image Single Batch Request (all images in one generateContent call)
+      // 1B. Try Multi-Image Single Batch Request
       try {
         const multiImageResult = await tryMultiImageSingleCall(items);
         if (multiImageResult && multiImageResult.length === items.length) {
@@ -799,7 +978,7 @@
         }
       } catch (_) {}
 
-      // 1C. Parallel Batch Execution across items with automatic model & key fallback
+      // 1C. Parallel Execution across items with automatic model fallback
       let completed = 0;
       const results = await Promise.all(
         items.map(async (item) => {
@@ -833,23 +1012,9 @@
         }
       };
 
-      const candidateCalls = [
-        { model: 'gemini-4-hydrogen', key: GEMINI_API_KEY },
-        { model: 'gemini-2.5-flash', key: GEMINI_API_KEY },
-        { model: 'gemini-3-flash-preview', key: '' },
-        { model: 'gemini-2.5-flash-preview-09-2025', key: '' }
-      ];
-
-      for (const candidate of candidateCalls) {
+      for (const modelName of FALLBACK_MODELS) {
         try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate.model}:generateContent?key=${encodeURIComponent(candidate.key)}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) continue;
-          const data = await res.json();
+          const data = await callGeminiEndpoint('single', modelName, payload);
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
           const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
           if (Array.isArray(parsed) && parsed.length === items.length) {
@@ -876,68 +1041,12 @@
         }
       };
 
-      const candidateCalls = [
-        { model: 'gemini-4-hydrogen', key: GEMINI_API_KEY },
-        { model: 'gemini-2.5-flash', key: GEMINI_API_KEY },
-        { model: 'gemini-3-flash-preview', key: '' },
-        { model: 'gemini-2.5-flash-preview-09-2025', key: '' }
-      ];
-
-      for (const candidate of candidateCalls) {
+      for (const modelName of FALLBACK_MODELS) {
         try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate.model}:generateContent?key=${encodeURIComponent(candidate.key)}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) continue;
-          const data = await res.json();
-          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-          const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
-          if (Array.isArray(parsed) && parsed.length === items.length) {
-            return parsed;
-          }
-        } catch (_) {}
-      }
-      return null;
-    }
-
-    async function extractSingleOPDWithFallback(item) {
-      const payload = {
-        contents: [{
-          role: 'user',
-          parts: [
-            { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพใบ OPD นี้เป็น JSON:' },
-            { inlineData: { mimeType: item.mimeType || 'image/jpeg', data: item.base64Data } }
-          ]
-        }],
-        systemInstruction: { parts: [{ text: OPD_SYSTEM_PROMPT }] },
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: SINGLE_ITEM_SCHEMA
-        }
-      };
-
-      const candidateCalls = [
-        { model: GEMINI_MODEL, key: GEMINI_API_KEY },
-        { model: 'gemini-3-flash-preview', key: '' },
-        { model: 'gemini-2.5-flash-preview-09-2025', key: '' }
-      ];
-
-      for (const candidate of candidateCalls) {
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate.model}:generateContent?key=${encodeURIComponent(candidate.key)}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) continue;
-          const data = await res.json();
+          const data = await callGeminiEndpoint('single', modelName, payload);
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
           const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
-          if (parsed && typeof parsed === 'object') {
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             return parsed;
           }
         } catch (_) {}
@@ -1251,6 +1360,10 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateApiKeyBadge();
+    });
   </script>
 </body>
 </html>
