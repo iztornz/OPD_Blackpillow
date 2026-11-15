@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blackpillow OPD Batch OCR — ระบบสแกนใบ OPD แบบกลุ่ม (สูงสุด 20 รูป) ลงแท็บ raw data</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Plus Jakarta Sans, Noto Sans Thai, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Surface & Palette Tokens */
+      --bg-canvas: #ecf0fb;
+      --surface-card: linear-gradient(145deg, #e8edfc, #f2f5ff);
+      --surface-well: linear-gradient(145deg, #e3e9fa, #f4f7ff);
+      --border-specular: 1px solid #ffffffb8;
+      --border-cta: 1px solid #ffffff65;
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-muted: #7181a6;
+
+      /* Neumorphic Shadow Tokens */
+      --shadow-extruded: 12px 12px 24px #ccd4f0, -12px -12px 24px #ffffff;
+      --shadow-extruded-sm: 6px 6px 14px #ccd4f0, -6px -6px 14px #ffffff;
+      --shadow-extruded-hover: 15px 15px 30px #c3cce9, -15px -15px 30px #ffffff;
+      --shadow-inset: inset 6px 6px 12px #ccd4f0, inset -6px -6px 12px #ffffff;
+      --shadow-inset-sm: inset 4px 4px 8px #ccd4f0, inset -4px -4px 8px #ffffff;
+      --shadow-inset-active: inset 8px 8px 16px #c2cbe8, inset -8px -8px 16px #ffffff;
+
+      /* Accent & CTA Gradients */
+      --gradient-primary: linear-gradient(105deg, #43c9ff, #497bff 48%, #9b38ff);
+      --gradient-checked: linear-gradient(135deg, #48bdff, #873cff);
+      --shadow-cta: 0 8px 15px #6b72ed4d, inset 0 2px 2px #ffffff75, inset 0 -3px 5px #5b35dd45;
+      --shadow-cta-hover: 0 12px 22px #6b72ed66, inset 0 2px 3px #ffffff90, inset 0 -3px 6px #5b35dd55;
+
+      /* Radius Tokens */
+      --radius-card: 24px;
+      --radius-inner: 16px;
+      --radius-pill: 50px;
+
+      /* Physics Timing */
+      --ease-recovery: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-mono-metric {
+      font-family: 'JetBrains Mono', 'Noto Sans Thai', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Main Extruded Neumorphic Card */
+    .neu-card {
+      background: var(--surface-card);
+      border-radius: var(--radius-card);
+      border: var(--border-specular);
+      box-shadow: var(--shadow-extruded);
+      transition: transform 0.3s var(--ease-recovery), box-shadow 0.3s var(--ease-recovery);
+    }
+
+    .neu-card-inner {
+      background: var(--surface-card);
+      border-radius: var(--radius-inner);
+      border: var(--border-specular);
+      box-shadow: var(--shadow-extruded-sm);
+    }
+
+    /* Recessed Well / Pill Input */
+    .neu-well {
+      background: var(--surface-well);
+      border-radius: var(--radius-inner);
+      border: var(--border-specular);
+      box-shadow: var(--shadow-inset);
+      transition: all 0.3s ease;
+    }
+
+    .neu-input-pill {
+      background: var(--surface-card);
+      border-radius: var(--radius-pill);
+      border: var(--border-specular);
+      box-shadow: var(--shadow-inset-sm);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    .neu-input-cell {
+      background: var(--surface-card);
+      border-radius: 14px;
+      border: var(--border-specular);
+      box-shadow: var(--shadow-inset-sm);
+      color: var(--text-primary);
+      transition: all 0.25s ease;
+      outline: none;
+    }
+
+    .neu-input-pill::placeholder,
+    .neu-input-cell::placeholder {
+      color: var(--text-muted);
+    }
+
+    .neu-input-pill:focus,
+    .neu-input-cell:focus {
+      box-shadow: var(--shadow-inset), 0 0 0 3px rgba(73, 123, 255, 0.25);
+      border-color: #497bff88;
+    }
+
+    .neu-input-warning {
+      box-shadow: inset 4px 4px 8px #e6d5c3, inset -4px -4px 8px #ffffff, 0 0 0 2px rgba(245, 158, 11, 0.45);
+      border-color: #f59e0b99;
+      background: linear-gradient(145deg, #fdf8ef, #fffdf9);
+    }
+
+    .neu-input-error {
+      box-shadow: inset 4px 4px 8px #ead2d8, inset -4px -4px 8px #ffffff, 0 0 0 2px rgba(239, 68, 68, 0.45);
+      border-color: #ef444499;
+      background: linear-gradient(145deg, #fef2f2, #fffafa);
+    }
+
+    /* 3-Stage Micro-Interaction Physics for Buttons */
+    .neu-btn {
+      background: var(--surface-card);
+      border-radius: var(--radius-pill);
+      border: var(--border-specular);
+      box-shadow: var(--shadow-extruded-sm);
+      color: var(--text-primary);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s var(--ease-recovery), box-shadow 0.3s var(--ease-recovery), color 0.2s ease;
+    }
+
+    .neu-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-extruded-hover);
+      color: #497bff;
+    }
+
+    .neu-btn:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: var(--shadow-inset-active);
+      transition: transform 80ms ease, box-shadow 80ms ease;
+    }
+
+    .neu-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    /* Vibrant Gradient CTA & Active Pill */
+    .neu-btn-primary {
+      background: var(--gradient-primary);
+      border-radius: var(--radius-pill);
+      border: var(--border-cta);
+      box-shadow: var(--shadow-cta);
+      color: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s var(--ease-recovery), box-shadow 0.3s var(--ease-recovery), filter 0.2s ease;
+    }
+
+    .neu-btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-cta-hover);
+      filter: brightness(1.04);
+    }
+
+    .neu-btn-primary:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: inset 0 4px 10px rgba(45, 20, 120, 0.55);
+      transition: transform 80ms ease, box-shadow 80ms ease;
+    }
+
+    .neu-btn-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: grayscale(0.25);
+    }
+
+    /* Sidebar Nav Item */
+    .nav-pill {
+      border-radius: var(--radius-pill);
+      transition: all 0.3s var(--ease-recovery);
+      color: var(--text-muted);
+      border: 1px solid transparent;
+    }
+
+    .nav-pill:hover:not(.active) {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.45);
+      transform: translateX(3px);
+    }
+
+    .nav-pill.active {
+      background: var(--gradient-primary);
+      color: #ffffff;
+      border: var(--border-cta);
+      box-shadow: var(--shadow-cta);
+      font-weight: 600;
+    }
+
+    /* Tactile Toggle Checkbox */
+    .neu-toggle-track {
+      width: 48px;
+      height: 26px;
+      border-radius: 50px;
+      background: var(--surface-well);
+      box-shadow: var(--shadow-inset-sm);
+      border: var(--border-specular);
+      position: relative;
+      transition: all 0.3s var(--ease-recovery);
+      cursor: pointer;
+    }
+
+    .neu-toggle-track.checked {
+      background: var(--gradient-checked);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .neu-toggle-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 5px rgba(30, 41, 59, 0.25);
+      position: absolute;
+      top: 2px;
+      left: 3px;
+      transition: transform 0.3s var(--ease-recovery);
+    }
+
+    .neu-toggle-track.checked .neu-toggle-thumb {
+      transform: translateX(21px);
+    }
+
+    /* Skeleton Shimmer for Loading State */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #43c9ff 15%, #9b38ff 50%, #43c9ff 85%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #e4eaf9;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #b9c5e8;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a5d6;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row selection:bg-blue-500 selection:text-white">
+
+  <!-- ================= LEFT SIDEBAR (TIER 1 MACRO NAVIGATION) ================= -->
+  <aside class="w-full lg:w-72 p-4 lg:p-6 flex-shrink-0 flex flex-col justify-between gap-6">
+    <div class="neu-card p-5 flex flex-col gap-6 h-full justify-between">
+      <div>
+        <!-- Brand Header -->
+        <div class="flex items-center gap-3.5 pb-5 border-b border-slate-200/80">
+          <div class="w-12 h-12 rounded-2xl neu-btn-primary flex items-center justify-center flex-shrink-0 shadow-lg">
+            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-base tracking-tight text-slate-800">BLACKPILLOW</span>
+              <span class="text-[10px] font-mono-metric font-semibold uppercase px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">BATCH 20</span>
+            </div>
+            <p class="text-xs text-[#7181a6] mt-0.5">ระบบสแกนใบ OPD อัตโนมัติ</p>
+          </div>
+        </div>
+
+        <!-- Macro Domains -->
+        <div class="mt-6">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-[#7181a6] px-3 mb-2.5">เมนูหลัก (Workspace)</p>
+          <nav class="flex flex-col gap-2.5" aria-label="Main Navigation">
+            <button onclick="switchMacroView('batch')" id="nav-batch" class="nav-pill active flex items-center justify-between px-4 py-3 text-sm text-left">
+              <span class="flex items-center gap-3">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span>สแกนใบ OPD (สูงสุด 20 รูป)</span>
+              </span>
+              <span id="sidebar-batch-pill" class="text-xs font-mono-metric px-2 py-0.5 rounded-full bg-white/25 text-white">0/20</span>
+            </button>
+
+            <button onclick="switchMacroView('sheet-setup')" id="nav-sheet-setup" class="nav-pill flex items-center justify-between px-4 py-3 text-sm text-left">
+              <span class="flex items-center gap-3">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>เชื่อมต่อแท็บ raw data</span>
+              </span>
+              <span id="sidebar-webhook-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            </button>
+
+            <button onclick="switchMacroView('api-settings')" id="nav-api-settings" class="nav-pill flex items-center justify-between px-4 py-3 text-sm text-left">
+              <span class="flex items-center gap-3">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>ตั้งค่า AI OCR Engine</span>
+              </span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Target Google Sheet Card (Direct Link + Tab raw data Status) -->
+        <div class="mt-6 pt-5 border-t border-slate-200/80 flex flex-col gap-3">
+          <div class="flex items-center justify-between px-1">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#7181a6]">ปลายทาง Google Sheets</span>
+            <span class="text-[10px] font-mono-metric font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">tab: raw data</span>
+          </div>
+
+          <div class="neu-well p-3.5 flex flex-col gap-2.5">
+            <div class="flex items-start gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center flex-shrink-0 font-bold text-xs">
+                GS
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-bold text-slate-800 truncate">Blackpillow OPD Database</p>
+                <p class="text-[10px] font-mono-metric text-[#7181a6] truncate mt-0.5">ID: 1Pm0-pxYRg...Vl3s</p>
+              </div>
+            </div>
+
+            <a
+              href="https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit?gid=0#gid=0"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="neu-btn px-3 py-2 text-xs font-semibold text-emerald-700 flex items-center justify-center gap-1.5 w-full text-center"
+            >
+              <span>เปิดไฟล์ Google Sheet (raw data)</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9 Fields Normalization Spec Summary -->
+      <div class="neu-well p-3.5 flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            กฎการสกัด 9 คอลัมน์อัตโนมัติ
+          </span>
+          <span id="sidebar-engine-label" class="text-[10px] font-mono-metric font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-full">Gemini Vision</span>
+        </div>
+        <p class="text-[11px] text-[#7181a6] leading-relaxed">
+          รองรับใบ OPD ทุกรูปแบบโดยอัตโนมัติ แยกชื่อ-นามสกุลที่เขียนติดกัน แปลงวันเกิดและวันรับบริการเป็น พ.ศ. (<code class="font-mono-metric text-slate-700">dd/mm/yyyy</code>) และล็อกเบอร์โทรเป็น Text <code class="font-mono-metric text-slate-700">0xxxxxxxxx</code>
+        </p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN CONTENT AREA (TIER 2 HEADER + WORKSPACE) ================= -->
+  <main class="flex-1 flex flex-col p-4 lg:p-6 lg:pl-0 gap-6 max-w-full overflow-hidden">
+
+    <!-- TOP HEADER: Live Batch Counter, Auto-Sync Toggle, Search & Sheet Sync Actions -->
+    <header class="neu-card px-5 py-4 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+      <!-- Left Status Pills & Auto-Sync Switch -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Batch Queue Counter Pill -->
+        <div class="neu-well px-4 py-2 flex items-center gap-2.5">
+          <span class="text-xs font-semibold text-slate-700">คิวรูปภาพในรอบนี้:</span>
+          <span id="header-batch-counter" class="font-mono-metric text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">0 / 20 รูป</span>
+        </div>
+
+        <!-- Auto-Sync Toggle Switch -->
+        <div
+          onclick="toggleAutoSync()"
+          class="neu-card-inner px-3.5 py-1.5 flex items-center gap-3 cursor-pointer select-none"
+          title="เมื่อเปิด ระบบจะส่งข้อมูลที่สแกนเสร็จแล้วไปต่อท้ายในแท็บ raw data อัตโนมัติ"
+        >
+          <div id="autosync-toggle-track" class="neu-toggle-track checked">
+            <div class="neu-toggle-thumb"></div>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-800 leading-tight">Auto-Sync ลงแท็บ <code class="font-mono-metric text-indigo-700">raw data</code></p>
+            <p id="autosync-status-sub" class="text-[10px] text-emerald-700 font-medium">ทำงานอัตโนมัติทันทีที่สแกนเสร็จ</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Action Buttons -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <!-- Search Filter -->
+        <div class="relative flex-1 sm:w-56">
+          <svg class="w-4 h-4 text-[#7181a6] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input
+            id="global-search"
+            type="text"
+            oninput="handleSearchFilter(this.value)"
+            placeholder="ค้นหาชื่อ, เบอร์โทร, รายการ..."
+            class="neu-input-pill w-full pl-9 pr-4 py-2 text-xs"
+          />
+        </div>
+
+        <button
+          onclick="copyAllForRawDataSheet()"
+          class="neu-btn px-4 py-2 text-xs font-semibold flex items-center gap-2 text-slate-700"
+          title="คัดลอกตารางทั้งหมดเพื่อกด Ctrl+V วางในแท็บ raw data ได้ทันที"
+        >
+          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <span>คัดลอกวาง raw data (TSV)</span>
+        </button>
+
+        <button
+          onclick="pushAllRowsToGoogleSheet(false)"
+          id="btn-manual-sync"
+          class="neu-btn-primary px-4 py-2 text-xs font-bold flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <span>ส่งเข้าแท็บ raw data ทันที</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ================= VIEW 1: BATCH OCR WORKSPACE (LEFT 4 COLS UPLOAD/INSPECTOR + RIGHT 8 COLS 9-FIELD TABLE) ================= -->
+    <section id="view-batch" class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN (4 Cols): Multi-Upload Dropzone (Max 20) + Queue Filmstrip + Active Image Inspector -->
+      <div class="xl:col-span-4 flex flex-col gap-6">
+
+        <!-- Batch Upload & Progress Card -->
+        <div class="neu-card p-5 flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-extrabold text-slate-800">อัปโหลดรูปใบ OPD (สูงสุด 20 รูป)</h2>
+              <p class="text-xs text-[#7181a6] mt-0.5">เลือกไฟล์พร้อมกันสูงสุด 20 รูป ระบบจะอ่านและแยก 9 คอลัมน์ให้อัตโนมัติ</p>
+            </div>
+            <button onclick="clearBatchQueue()" class="neu-btn px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:text-red-600">
+              ล้างคิวทั้งหมด
+            </button>
+          </div>
+
+          <!-- Multi-Image Drag & Drop Zone -->
+          <label
+            for="batch-file-input"
+            id="batch-dropzone"
+            ondragover="handleBatchDragOver(event)"
+            ondragleave="handleBatchDragLeave(event)"
+            ondrop="handleBatchDrop(event)"
+            class="neu-well p-5 flex flex-col items-center justify-center text-center cursor-pointer border-2 border-dashed border-indigo-300/70 hover:border-indigo-500 transition-all min-h-[155px]"
+          >
+            <div class="w-12 h-12 rounded-2xl neu-btn-primary flex items-center justify-center mb-3 shadow-md">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+              </svg>
+            </div>
+            <p class="text-xs font-bold text-slate-800">คลิกเพื่อเลือกรูปใบ OPD หรือลากไฟล์มาวางที่นี่</p>
+            <p class="text-[11px] text-[#7181a6] mt-1">รองรับ JPG, PNG, WEBP, HEIC • เลือกได้สูงสุดครั้งละ <span class="font-mono-metric font-bold text-indigo-700">20 รูป</span></p>
+            <input
+              id="batch-file-input"
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/heic,image/*"
+              class="hidden"
+              onchange="handleBatchFileSelect(event)"
+            />
+          </label>
+
+          <!-- Primary Batch Scan CTA & Live Progress Bar -->
+          <div class="flex flex-col gap-2.5">
+            <div class="flex items-center gap-2.5">
+              <button
+                id="btn-run-batch-ocr"
+                onclick="processBatchOCRQueue()"
+                disabled
+                class="neu-btn-primary flex-1 py-3 px-5 text-xs font-extrabold flex items-center justify-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.3">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                <span id="btn-run-batch-label">สแกนทั้งหมดในคิว (0 รูป)</span>
+              </button>
+
+              <button
+                onclick="generateDemoBatch(3)"
+                class="neu-btn py-3 px-3.5 text-xs font-semibold text-indigo-700 flex-shrink-0"
+                title="จำลองการอัปโหลดรูปใบ OPD เพื่อทดสอบระบบส่งข้อมูลเข้าแท็บ raw data"
+              >
+                + ทดสอบระบบ (3 รูป)
+              </button>
+            </div>
+
+            <!-- Batch Progress Bar -->
+            <div id="batch-progress-wrapper" class="hidden flex-col gap-1.5 pt-1">
+              <div class="flex items-center justify-between text-[11px] font-mono-metric">
+                <span id="batch-progress-text" class="font-semibold text-indigo-700">กำลังประมวลผล OCR 0 / 0 รูป...</span>
+                <span id="batch-progress-percent" class="font-bold text-slate-700">0%</span>
+              </div>
+              <div class="w-full h-2.5 rounded-full neu-well overflow-hidden p-0.5">
+                <div id="batch-progress-bar" class="h-full rounded-full skeleton-shimmer transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thumbnail Queue Filmstrip (Up to 20 items) -->
+          <div class="flex flex-col gap-2 pt-2 border-t border-slate-200/80">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-700">รายการรูปภาพที่อัปโหลด</span>
+              <span id="queue-summary-text" class="text-[11px] font-mono-metric text-[#7181a6]">ยังไม่มีรูปในคิว</span>
+            </div>
+
+            <div id="batch-filmstrip-list" class="neu-well p-2.5 max-h-[230px] overflow-y-auto flex flex-col gap-2">
+              <div class="py-6 text-center text-xs text-[#7181a6]">
+                อัปโหลดรูปใบ OPD (1–20 รูป) เพื่อแสดงรายการคิวที่นี่
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active OPD Image Inspector (Zoom / Rotate / Ink Contrast) -->
+        <div class="neu-card p-5 flex flex-col gap-3.5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-extrabold text-slate-800">ตรวจสอบภาพใบ OPD ต้นฉบับ</h3>
+              <p id="inspector-filename" class="text-[11px] font-mono-metric text-[#7181a6] truncate max-w-[230px]">คลิกที่รูปในคิวหรือคลิกแถวในตารางเพื่อดูภาพขยาย</p>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button onclick="adjustInspectorZoom(0.25)" class="neu-btn w-8 h-8 flex items-center justify-center text-xs font-bold" title="ขยายภาพ">+</button>
+              <button onclick="adjustInspectorZoom(-0.25)" class="neu-btn w-8 h-8 flex items-center justify-center text-xs font-bold" title="ย่อภาพ">−</button>
+              <button onclick="rotateInspectorImage()" class="neu-btn w-8 h-8 flex items-center justify-center text-xs font-bold" title="หมุนภาพ 90 องศา">↻</button>
+              <button onclick="toggleInspectorContrast()" id="btn-inspector-contrast" class="neu-btn px-2.5 h-8 text-[10px] font-semibold" title="เร่งความชัดหมึกปากกา">ชัดขึ้น</button>
+              <button onclick="resetInspectorView()" class="neu-btn px-2.5 h-8 text-[10px] font-semibold" title="รีเซ็ตมุมมอง">100%</button>
+            </div>
+          </div>
+
+          <div class="neu-well p-3 min-h-[260px] max-h-[340px] overflow-auto flex items-center justify-center relative">
+            <div id="inspector-empty-state" class="text-center p-6">
+              <svg class="w-10 h-10 text-[#7181a6]/60 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              <p class="text-xs font-semibold text-slate-600">ยังไม่ได้เลือกรูปภาพ</p>
+              <p class="text-[11px] text-[#7181a6] mt-0.5">เมื่ออัปโหลดรูปภาพแล้ว คลิกที่รายการใดก็ได้เพื่อตรวจสอบลายมือเทียบกับตาราง</p>
+            </div>
+            <img
+              id="inspector-img-el"
+              src=""
+              alt="OPD Card Inspector"
+              class="hidden max-w-full max-h-[310px] object-contain rounded-xl transition-transform duration-200 origin-center"
+            />
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-[#7181a6]">
+            <span id="inspector-status-text">สถานะ: -</span>
+            <button onclick="rescanSelectedSingleItem()" id="btn-rescan-single" disabled class="neu-btn px-3 py-1 text-[11px] font-semibold text-indigo-700">
+              สแกนรูปนี้ซ้ำอีกครั้ง
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN (8 Cols): Editable 9-Field Batch Results Table + Bulk Helpers + Raw Data Sync Bar -->
+      <div class="xl:col-span-8 flex flex-col gap-6">
+        <div class="neu-card p-6 flex flex-col gap-5">
+
+          <!-- Table Header & Bulk Normalization Toolbar -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/80">
+            <div>
+              <div class="flex items-center gap-2.5">
+                <h2 class="text-lg font-extrabold text-slate-800">ตารางผลลัพธ์ 9 คอลัมน์ (ตรงตามแท็บ <code class="font-mono-metric text-indigo-700">raw data</code>)</h2>
+                <span id="table-row-count-badge" class="text-xs font-mono-metric font-bold px-3 py-0.5 rounded-full bg-indigo-100 text-indigo-800">0 แถว</span>
+              </div>
+              <p class="text-xs text-[#7181a6] mt-0.5">ตรวจสอบหรือพิมพ์แก้ไขในช่องได้โดยตรง • ทุกแถวจัดรูปแบบวันที่ พ.ศ. (<code class="font-mono-metric">dd/mm/yyyy</code>) และเบอร์โทร <code class="font-mono-metric">0xxxxxxxxx</code> อัตโนมัติ</p>
+            </div>
+
+            <!-- Bulk Tools -->
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                onclick="fillEmptyServiceDatesToday()"
+                class="neu-btn px-3.5 py-1.5 text-xs font-semibold text-slate-700"
+                title="เติมวันที่รับบริการวันนี้ (15/11/2569) ให้ทุกแถวที่ช่องวันที่รับบริการว่างอยู่"
+              >
+                เติมวันรับบริการวันนี้ (ช่องที่ว่าง)
+              </button>
+              <button
+                onclick="toggleGenderDisplayMode()"
+                id="btn-gender-mode"
+                class="neu-btn px-3.5 py-1.5 text-xs font-mono-metric font-semibold text-slate-700"
+              >
+                เพศ: ญ / ช
+              </button>
+              <button
+                onclick="addBlankRowToBatch()"
+                class="neu-btn px-3.5 py-1.5 text-xs font-semibold text-indigo-700"
+              >
+                + เพิ่มแถวว่าง
+              </button>
+            </div>
+          </div>
+
+          <!-- 9-Column Editable Batch Table -->
+          <div class="neu-well p-3 overflow-x-auto min-h-[420px]">
+            <table class="w-full text-left border-collapse min-w-[1060px]">
+              <thead>
+                <tr class="border-b border-slate-300/80 text-[11px] font-extrabold text-slate-700 uppercase tracking-tight">
+                  <th class="py-3 px-2 w-10 text-center">#</th>
+                  <th class="py-3 px-2 w-36">1. ชื่อ</th>
+                  <th class="py-3 px-2 w-36">2. นามสกุล</th>
+                  <th class="py-3 px-1.5 w-16 text-center">3. อายุ</th>
+                  <th class="py-3 px-1.5 w-16 text-center">4. เพศ</th>
+                  <th class="py-3 px-1.5 w-20 text-center">5. สัญชาติ</th>
+                  <th class="py-3 px-2 w-32">6. วันเดือนปีเกิด (พ.ศ.)</th>
+                  <th class="py-3 px-2 w-32">7. เบอร์โทรศัพท์</th>
+                  <th class="py-3 px-2 w-32">8. วันรับบริการ (พ.ศ.)</th>
+                  <th class="py-3 px-2 min-w-[190px]">9. รายการที่มาทำ</th>
+                  <th class="py-3 px-2 w-24 text-center">สถานะ Sync</th>
+                </tr>
+              </thead>
+              <tbody id="batch-results-tbody" class="divide-y divide-slate-200/70 text-xs">
+                <!-- Populated dynamically by renderBatchWorkspace() -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Bottom Sync & Export Bar -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+            <div class="flex items-center gap-3">
+              <div id="sync-banner-indicator" class="w-3 h-3 rounded-full bg-emerald-500"></div>
+              <div class="text-xs">
+                <span class="font-bold text-slate-800">สถานะการเชื่อมต่อ Google Sheets (<code class="font-mono-metric text-indigo-700">raw data</code>):</span>
+                <span id="sync-status-message" class="text-[#7181a6] ml-1">พร้อมส่งข้อมูลทั้ง 9 คอลัมน์</span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+              <button onclick="exportBatchCSV()" class="neu-btn px-4 py-2.5 text-xs font-semibold flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>ดาวน์โหลด CSV</span>
+              </button>
+
+              <button onclick="copyAllForRawDataSheet()" class="neu-btn px-4 py-2.5 text-xs font-semibold text-indigo-700 flex items-center gap-1.5">
+                <span>คัดลอกทั้งหมดวางใน raw data</span>
+              </button>
+
+              <button onclick="pushAllRowsToGoogleSheet(false)" class="neu-btn-primary px-6 py-2.5 text-xs font-extrabold flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>ส่งข้อมูลทั้งหมดลงแท็บ raw data</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 2: GOOGLE SHEET (`raw data`) AUTO-SYNC SETUP ================= -->
+    <section id="view-sheet-setup" class="hidden grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Left: Connection Status & Webhook Input -->
+      <div class="lg:col-span-5 neu-card p-6 flex flex-col gap-5">
+        <div>
+          <span class="text-[11px] font-mono-metric font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Google Sheets Integration</span>
+          <h2 class="text-lg font-extrabold text-slate-800 mt-2">เชื่อมต่อไฟล์ Google Sheet แท็บ <code class="font-mono-metric text-indigo-700">raw data</code></h2>
+          <p class="text-xs text-[#7181a6] mt-1 leading-relaxed">
+            ระบบตั้งค่าล็อกเป้าไปที่ไฟล์สเปรดชีตของคลินิก (<code class="font-mono-metric">1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s</code>) ในแท็บชื่อ <strong class="text-slate-800">raw data</strong> เรียบร้อยแล้ว
+          </p>
+        </div>
+
+        <div class="neu-well p-4 flex flex-col gap-3 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-700">Spreadsheet ID เป้าหมาย:</span>
+            <span class="font-mono-metric text-[11px] text-indigo-700 font-semibold">1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-700">ชื่อแท็บปลายทาง (Sheet Tab):</span>
+            <span class="font-mono-metric font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">raw data</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-700">ลำดับคอลัมน์ A ถึง I (9 คอลัมน์):</span>
+            <span class="font-mono-metric text-[11px] text-slate-600">ชื่อ → รายการที่มาทำ</span>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label for="gas-webapp-url" class="text-xs font-bold text-slate-700">
+            วาง Web App URL ที่ได้จากการ Deploy Google Apps Script ด้านขวา:
+          </label>
+          <input
+            id="gas-webapp-url"
+            type="url"
+            oninput="saveGasWebhookUrl(this.value)"
+            placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+            class="neu-input-pill px-4 py-3 text-xs font-mono-metric w-full"
+          />
+          <p class="text-[11px] text-[#7181a6] px-2">
+            *ระบบจะจดจำ URL นี้ไว้ในเบราว์เซอร์ของคุณอัตโนมัติ เมื่อสแกนใบ OPD เสร็จ ข้อมูลจะถูกส่งเข้าแท็บ <code class="font-mono-metric">raw data</code> ทันที
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 pt-1">
+          <button onclick="sendTestRowToRawData()" class="neu-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span>ทดสอบส่งข้อมูลเข้าแท็บ raw data</span>
+          </button>
+
+          <a
+            href="https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit?gid=0#gid=0"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="neu-btn px-4 py-2.5 text-xs font-semibold text-slate-700"
+          >
+            เปิดดูไฟล์ Google Sheet ↗
+          </a>
+        </div>
+
+        <div class="neu-card-inner p-4 flex flex-col gap-2 text-xs text-slate-700">
+          <p class="font-bold text-slate-800">ขั้นตอนการติดตั้งเพียงครั้งเดียว (ใช้เวลา 1 นาที):</p>
+          <ol class="list-decimal list-inside space-y-1.5 text-[#475569]">
+            <li>เปิดไฟล์ Google Sheet ด้านบน แล้วไปที่เมนู <strong>ส่วนขยาย (Extensions) &gt; Apps Script</strong></li>
+            <li>ลบโค้ดเดิมออกทั้งหมด แล้ววางโค้ด <code class="font-mono-metric">Code.gs</code> จากกล่องด้านขวา</li>
+            <li>กดปุ่ม <strong>การทำให้ใช้งานได้ (Deploy) &gt; การทำให้ใช้งานได้รายการใหม่ (New deployment)</strong></li>
+            <li>เลือกประเภทเป็น <strong>เว็บแอป (Web app)</strong> ตั้งค่า <em>ผู้ที่มีสิทธิ์เข้าถึง (Who has access)</em> เป็น <strong>ทุกคน (Anyone)</strong> แล้วกด Deploy</li>
+            <li>คัดลอก <strong>Web App URL</strong> มาวางในช่องด้านบน เป็นอันเสร็จสมบูรณ์!</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Right: Ready-to-Paste Google Apps Script Bound to Spreadsheet 1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s & Tab 'raw data' -->
+      <div class="lg:col-span-7 neu-card p-6 flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-extrabold text-slate-800">โค้ด Google Apps Script (<code class="font-mono-metric">Code.gs</code>) สำหรับแท็บ <code class="font-mono-metric text-indigo-700">raw data</code></h3>
+            <p class="text-xs text-[#7181a6] mt-0.5">ผูกกับ Spreadsheet ID <code class="font-mono-metric">1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s</code> และแท็บ <code class="font-mono-metric">raw data</code> โดยตรง</p>
+          </div>
+          <button onclick="copyRawDataAppsScript()" class="neu-btn-primary px-4 py-2 text-xs font-bold">
+            คัดลอกโค้ด Code.gs
+          </button>
+        </div>
+
+        <pre id="raw-data-gas-code" class="neu-well p-4 text-[11px] font-mono-metric text-slate-800 overflow-x-auto max-h-[460px] leading-relaxed"><code>/**
+ * Blackpillow OPD Batch OCR -> Auto-Sync ลงแท็บ "raw data"
+ * Spreadsheet: https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit
+ */
+const SPREADSHEET_ID = '1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s';
+const TARGET_TAB_NAME = 'raw data';
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const rawBody = e.postData ? e.postData.contents : '{}';
+    const payload = JSON.parse(rawBody);
+    const rows = Array.isArray(payload.rows) ? payload.rows : [payload];
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = ss.getSheetByName(TARGET_TAB_NAME);
+    if (!sheet) {
+      sheet = ss.insertSheet(TARGET_TAB_NAME);
+    }
+
+    // สร้างหัวตาราง 9 คอลัมน์อัตโนมัติหากแท็บ raw data ยังว่างอยู่
+    if (sheet.getLastRow() === 0) {
+      const headers = [
+        'ชื่อ',
+        'นามสกุล',
+        'อายุ',
+        'เพศ',
+        'สัญชาติ',
+        'วันเดือนปีเกิด',
+        'เบอร์โทรศัพท์',
+        'วันเดือนปีที่เข้ารับบริการ',
+        'รายการที่มาทำ'
+      ];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+    }
+
+    if (rows.length > 0) {
+      const startRow = sheet.getLastRow() + 1;
+      const valuesToAppend = rows.map(item => {
+        // บังคับเบอร์โทรศัพท์เป็น 0xxxxxxxxx (10 หลักติดกัน)
+        let cleanPhone = String(item.phone || '').replace(/\D/g, '');
+        if (cleanPhone.length === 9 && !cleanPhone.startsWith('0')) {
+          cleanPhone = '0' + cleanPhone;
+        }
+        return [
+          String(item.firstName || '').trim(),
+          String(item.lastName || '').trim(),
+          String(item.age || '').trim(),
+          String(item.gender || '').trim(),
+          String(item.nationality || 'ไทย').trim(),
+          String(item.birthDate || '').trim(),
+          cleanPhone,
+          String(item.serviceDate || '').trim(),
+          String(item.treatments || '').trim()
+        ];
+      });
+
+      const targetRange = sheet.getRange(startRow, 1, valuesToAppend.length, 9);
+      // ตั้งค่า Format คอลัมน์ วันเกิด (Col 6), เบอร์โทร (Col 7), วันรับบริการ (Col 8) เป็น Plain Text (@) เพื่อไม่ให้เลข 0 นำหน้าหาย
+      sheet.getRange(startRow, 6, valuesToAppend.length, 3).setNumberFormat('@');
+      targetRange.setValues(valuesToAppend);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      insertedRows: rows.length,
+      sheetName: TARGET_TAB_NAME
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3: AI OCR ENGINE SETTINGS ================= -->
+    <section id="view-api-settings" class="hidden grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div class="lg:col-span-7 neu-card p-6 flex flex-col gap-5">
+        <div>
+          <h2 class="text-base font-extrabold text-slate-800">ตั้งค่าเครื่องยนต์ AI OCR สำหรับอ่านใบ OPD</h2>
+          <p class="text-xs text-[#7181a6] mt-1">รองรับทั้ง Gemini Vision Multimodal API และ iApp Document OCR (<code class="font-mono-metric">https://iapp.co.th/docs/ocr/document</code>)</p>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <label onclick="setOcrEngineMode('GEMINI')" id="engine-option-gemini" class="neu-card-inner p-4 cursor-pointer border-2 border-indigo-500/80 flex items-start gap-3.5">
+            <input type="radio" name="engine_mode" checked class="mt-1 accent-indigo-600" />
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">Gemini Vision Multimodal (แนะนำสำหรับลายมือบนใบ OPD)</span>
+                <span class="text-[10px] font-mono-metric px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold">Auto 9-Field JSON</span>
+              </div>
+              <p class="text-xs text-[#7181a6] mt-1 leading-relaxed">
+                เข้าใจโครงสร้างใบ OPD ทุกรูปแบบโดยอัตโนมัติ แยกชื่อ-นามสกุลที่เขียนติดกัน แปลงเดือนภาษาไทยเป็นตัวเลข และดึงรายการหัตถการได้ในขั้นตอนเดียว
+              </p>
+            </div>
+          </label>
+
+          <label onclick="setOcrEngineMode('IAPP')" id="engine-option-iapp" class="neu-card-inner p-4 cursor-pointer border-2 border-transparent flex items-start gap-3.5">
+            <input type="radio" name="engine_mode" class="mt-1 accent-indigo-600" />
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800">iApp Document OCR (<code class="font-mono-metric">/v3/store/ocr/document/ocr</code>) + ตัวสกัด 9 ฟิลด์</span>
+                <span class="text-[10px] font-mono-metric px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 font-semibold">0.049 IC / หน้า</span>
+              </div>
+              <p class="text-xs text-[#7181a6] mt-1 leading-relaxed">
+                ส่งภาพไปยัง iApp OpenThai 2.0 OCR เพื่อดึงข้อความภาษาไทย แล้วนำข้อความที่ได้มาแยกเข้า 9 คอลัมน์อัตโนมัติ
+              </p>
+            </div>
+          </label>
+        </div>
+
+        <div class="neu-well p-4 flex flex-col gap-3">
+          <div>
+            <label for="custom-gemini-key" class="text-xs font-bold text-slate-700 block mb-1">Gemini API Key (เว้นว่างไว้เพื่อใช้คีย์เริ่มต้นของระบบได้ทันที)</label>
+            <input
+              id="custom-gemini-key"
+              type="password"
+              oninput="saveApiKeysToStorage()"
+              placeholder="AIzaSy... (ไม่บังคับ)"
+              class="neu-input-pill px-4 py-2.5 text-xs font-mono-metric w-full"
+            />
+          </div>
+
+          <div>
+            <label for="custom-iapp-key" class="text-xs font-bold text-slate-700 block mb-1">iApp API Key (จาก iapp.co.th สำหรับโหมด iApp Document OCR)</label>
+            <input
+              id="custom-iapp-key"
+              type="password"
+              oninput="saveApiKeysToStorage()"
+              placeholder="ระบุ apikey จาก iapp.co.th"
+              class="neu-input-pill px-4 py-2.5 text-xs font-mono-metric w-full"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-5 neu-card p-6 flex flex-col gap-4">
+        <h3 class="text-base font-extrabold text-slate-800">สรุปกฎการจัดรูปแบบทั้ง 9 ฟิลด์ก่อนส่งเข้า <code class="font-mono-metric text-indigo-700">raw data</code></h3>
+        <ul class="space-y-2.5 text-xs text-slate-700">
+          <li class="flex items-start gap-2">
+            <span class="font-mono-metric font-bold text-indigo-600">1. ชื่อ:</span>
+            <span>ตัดคำนำหน้า (<code class="font-mono-metric">K.</code>, <code class="font-mono-metric">คุณ</code>, <code class="font-mono-metric">นาย</code>, <code class="font-mono-metric">นางสาว</code>, <code class="font-mono-metric">น.ส.</code>) ออกทั้งหมด</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-mono-metric font-bold text-indigo-600">2. นามสกุล:</span>
+            <span>หากชื่อและนามสกุลเขียนต่อกันในช่องเดียว ระบบจะแยกคำหลังเว้นวรรคมาใส่ช่องนามสกุลให้อัตโนมัติ</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-mono-metric font-bold text-indigo-600">3–5. อายุ / เพศ / สัญชาติ:</span>
+            <span>อายุเป็นตัวเลขจำนวนเต็ม, เพศจัดรูปแบบเป็น <code class="font-mono-metric">ญ</code> หรือ <code class="font-mono-metric">ช</code>, สัญชาติค่าเริ่มต้น <code class="font-mono-metric">ไทย</code></span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-mono-metric font-bold text-indigo-600">6 & 8. วันเกิด & วันรับบริการ:</span>
+            <span>แปลงเป็น <code class="font-mono-metric">dd/mm/yyyy</code> (พ.ศ.) เสมอ เช่น <code class="font-mono-metric">30 กค 2550</code> → <code class="font-mono-metric">30/07/2550</code>, <code class="font-mono-metric">30/8/69</code> → <code class="font-mono-metric">30/08/2569</code></span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-mono-metric font-bold text-indigo-600">7. เบอร์โทรศัพท์:</span>
+            <span>ล็อกเป็น Text 10 หลักติดกัน <code class="font-mono-metric">0xxxxxxxxx</code> ไม่ให้ Google Sheets ตัดเลข 0 ตัวหน้าออก</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="font-mono-metric font-bold text-indigo-600">9. รายการที่มาทำ:</span>
+            <span>สกัดรายการหัตถการทั้งหมดจากใบ OPD ไม่ว่าจะเขียนอยู่ในช่อง Treatment หรือในตาราง</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Notification Pill -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
+    <div class="neu-card px-5 py-3.5 flex items-center gap-3 border-l-4 border-l-indigo-600 shadow-2xl">
+      <span id="toast-dot" class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+      <p id="toast-message" class="text-xs font-bold text-slate-800"></p>
+    </div>
+  </div>
+
+  <!-- ================= APPLICATION LOGIC & BATCH OCR / GOOGLE SHEETS PIPELINE ================= -->
+  <script>
+    const MAX_BATCH_FILES = 20;
+    const TARGET_SPREADSHEET_ID = '1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s';
+    const TARGET_SHEET_TAB = 'raw data';
+
+    // --- 1. STATE MANAGEMENT ---
+    let batchItems = []; // Each item: { id, fileName, previewUrl, base64Data, mimeType, status, synced, data: { firstName, lastName, age, gender, nationality, birthDate, phone, serviceDate, treatments } }
+    let selectedItemId = null;
+    let isBatchProcessing = false;
+    let autoSyncEnabled = true;
+    let genderShortMode = true; // true = 'ญ'/'ช', false = 'หญิง'/'ชาย'
+    let ocrEngineMode = 'GEMINI'; // 'GEMINI' or 'IAPP'
+    let searchFilterText = '';
+
+    // Inspector Transform State
+    let inspectorZoom = 1;
+    let inspectorRotation = 0;
+    let inspectorContrast = false;
+
+    // --- 2. THAI DATE, PHONE & NAME NORMALIZATION FUNCTIONS ---
+    const THAI_MONTH_MAP = {
+      'ม.ค.': '01', 'มค': '01', 'มกราคม': '01',
+      'ก.พ.': '02', 'กพ': '02', 'กุมภาพันธ์': '02',
+      'มี.ค.': '03', 'มีค': '03', 'มีนาคม': '03',
+      'เม.ย.': '04', 'เมย': '04', 'เมษายน': '04',
+      'พ.ค.': '05', 'พค': '05', 'พฤษภาคม': '05',
+      'มิ.ย.': '06', 'มิย': '06', 'มิถุนายน': '06',
+      'ก.ค.': '07', 'กค': '07', 'กรกฎาคม': '07',
+      'ส.ค.': '08', 'สค': '08', 'สิงหาคม': '08',
+      'ก.ย.': '09', 'กย': '09', 'กันยายน': '09',
+      'ต.ค.': '10', 'ตค': '10', 'ตุลาคม': '10',
+      'พ.ย.': '11', 'พย': '11', 'พฤศจิกายน': '11',
+      'ธ.ค.': '12', 'ธค': '12', 'ธันวาคม': '12'
+    };
+
+    /**
+     * Strips honorific prefixes (K., คุณ, นาย, นางสาว, น.ส., etc.) and splits first/last name if written together.
+     */
+    function normalizeAndSplitName(rawFirst, rawLast) {
+      let cleanFirst = String(rawFirst || '').trim();
+      let cleanLast = String(rawLast || '').trim();
+
+      cleanFirst = cleanFirst.replace(/^(k\.|K\.|คุณ|นาย|นางสาว|นาง|น\.ส\.|ด\.ช\.|ด\.ญ\.)\s*/i, '').trim();
+      cleanLast = cleanLast.replace(/^(k\.|K\.|คุณ|นาย|นางสาว|นาง|น\.ส\.)\s*/i, '').trim();
+
+      if (!cleanLast && cleanFirst.includes(' ')) {
+        const parts = cleanFirst.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+          cleanFirst = parts[0];
+          cleanLast = parts.slice(1).join(' ');
+        }
+      }
+      return { firstName: cleanFirst, lastName: cleanLast };
+    }
+
+    /**
+     * Normalizes any Thai or numeric date string to strict dd/mm/yyyy in Buddhist Era (พ.ศ.)
+     */
+    function normalizeToThaiDate(rawInput) {
+      if (!rawInput) return '';
+      let str = String(rawInput).trim();
+      if (!str || str === '-') return '';
+
+      // 8 digits continuous or spaced (e.g. "16092522" or "1 6 0 9 2 5 2 2")
+      const digitsOnly = str.replace(/\s+/g, '');
+      if (/^\d{8}$/.test(digitsOnly)) {
+        const dd = digitsOnly.slice(0, 2);
+        const mm = digitsOnly.slice(2, 4);
+        let yyyy = parseInt(digitsOnly.slice(4, 8), 10);
+        if (yyyy < 2400) yyyy += 543;
+        return `${dd}/${mm}/${yyyy}`;
+      }
+
+      // Thai month name/abbreviation (e.g. "30 กค 2550")
+      for (const [thaiKey, monthNum] of Object.entries(THAI_MONTH_MAP)) {
+        if (str.includes(thaiKey)) {
+          const nums = str.match(/\d+/g);
+          if (nums && nums.length >= 2) {
+            const dd = nums[0].padStart(2, '0');
+            let yyyy = parseInt(nums[1], 10);
+            if (yyyy < 100) {
+              yyyy = yyyy > 75 ? 2400 + yyyy : 2500 + yyyy;
+            } else if (yyyy < 2400) {
+              yyyy += 543;
+            }
+            return `${dd}/${monthNum}/${yyyy}`;
+          }
+        }
+      }
+
+      // Delimited numeric date (e.g. "30/8/69", "16-09-2522")
+      const parts = str.split(/[\/\-\.\s]+/).filter(Boolean);
+      if (parts.length === 3 && parts.every(p => /^\d+$/.test(p))) {
+        const dd = parts[0].padStart(2, '0');
+        const mm = parts[1].padStart(2, '0');
+        let yyyy = parseInt(parts[2], 10);
+        if (yyyy < 100) {
+          yyyy = yyyy > 75 ? 2400 + yyyy : 2500 + yyyy;
+        } else if (yyyy < 2400) {
+          yyyy += 543;
+        }
+        return `${dd}/${mm}/${yyyy}`;
+      }
+
+      return str;
+    }
+
+    /**
+     * Normalizes phone number to strict 10-digit string 0xxxxxxxxx
+     */
+    function normalizePhone(rawPhone) {
+      if (!rawPhone) return '';
+      const digits = String(rawPhone).replace(/\D/g, '');
+      if (!digits) return '';
+      if (digits.length === 9 && !digits.startsWith('0')) {
+        return '0' + digits;
+      }
+      return digits.slice(0, 10);
+    }
+
+    /**
+     * Normalizes gender according to user toggle ('ญ'/'ช' vs 'หญิง'/'ชาย')
+     */
+    function normalizeGender(rawGender) {
+      const val = String(rawGender || '').trim();
+      if (!val) return '';
+      if (/^(ญ|ญ\.|หญิง|f|female)$/i.test(val)) return genderShortMode ? 'ญ' : 'หญิง';
+      if (/^(ช|ช\.|ชาย|m|male)$/i.test(val)) return genderShortMode ? 'ช' : 'ชาย';
+      return val;
+    }
+
+    // --- 3. IMAGE COMPRESSION & BATCH UPLOAD HANDLERS (MAX 20 IMAGES) ---
+    function handleBatchDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('border-indigo-600', 'bg-indigo-50/40');
+    }
+
+    function handleBatchDragLeave(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('border-indigo-600', 'bg-indigo-50/40');
+    }
+
+    function handleBatchDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('border-indigo-600', 'bg-indigo-50/40');
+      const files = Array.from(e.dataTransfer?.files || []);
+      if (files.length > 0) enqueueFiles(files);
+    }
+
+    function handleBatchFileSelect(e) {
+      const files = Array.from(e.target.files || []);
+      if (files.length > 0) enqueueFiles(files);
+      e.target.value = '';
+    }
+
+    /**
+     * Compresses an uploaded image file via HTML5 Canvas to max 1600px dimension for fast OCR transmission.
+     */
+    function compressImageFile(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          const img = new Image();
+          img.onload = () => {
+            const maxDim = 1600;
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedUrl = canvas.toDataURL('image/jpeg', 0.86);
+            resolve({
+              previewUrl: compressedUrl,
+              base64Data: compressedUrl.split(',')[1],
+              mimeType: 'image/jpeg'
+            });
+          };
+          img.onerror = () => {
+            resolve({
+              previewUrl: dataUrl,
+              base64Data: String(dataUrl).split(',')[1] || '',
+              mimeType: file.type || 'image/jpeg'
+            });
+          };
+          img.src = dataUrl;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function enqueueFiles(fileList) {
+      const remainingSlots = MAX_BATCH_FILES - batchItems.length;
+      if (remainingSlots <= 0) {
+        showToast(`คิวเต็ม ${MAX_BATCH_FILES} รูปแล้ว กรุณาสแกนหรือล้างคิวก่อนเพิ่มรูปใหม่`, true);
+        return;
+      }
+
+      let filesToProcess = fileList;
+      if (fileList.length > remainingSlots) {
+        filesToProcess = fileList.slice(0, remainingSlots);
+        showToast(`รองรับสูงสุดครั้งละ ${MAX_BATCH_FILES} รูป ระบบตัดมาเฉพาะ ${remainingSlots} รูปแรกให้แล้ว`, true);
+      }
+
+      for (const file of filesToProcess) {
+        const compressed = await compressImageFile(file);
+        const newItem = {
+          id: 'opd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          fileName: file.name,
+          previewUrl: compressed.previewUrl,
+          base64Data: compressed.base64Data,
+          mimeType: compressed.mimeType,
+          status: 'PENDING', // PENDING, PROCESSING, DONE, REVIEW, SYNCED, ERROR
+          synced: false,
+          data: {
+            firstName: '',
+            lastName: '',
+            age: '',
+            gender: 'ญ',
+            nationality: 'ไทย',
+            birthDate: '',
+            phone: '',
+            serviceDate: '',
+            treatments: ''
+          }
+        };
+        batchItems.push(newItem);
+        if (!selectedItemId) {
+          selectedItemId = newItem.id;
+        }
+      }
+
+      renderBatchWorkspace();
+      updateInspectorImage();
+      showToast(`เพิ่มรูปใบ OPD เข้าคิว ${filesToProcess.length} รูป (รวม ${batchItems.length}/${MAX_BATCH_FILES} รูป)`);
+    }
+
+    // --- 4. BATCH OCR EXECUTION PIPELINE (SEQUENTIAL/CONCURRENT WITH AUTO-SYNC TO `raw data`) ---
+    async function fetchWithBackoff(url, options, retries = 3, delay = 1000) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch(url, options);
+          if (res.ok) return res;
+          if (res.status !== 429 && res.status < 500) return res;
+        } catch (err) {
+          if (i === retries - 1) throw err;
+        }
+        await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+      }
+    }
+
+    async function processBatchOCRQueue() {
+      if (isBatchProcessing) return;
+      const pendingItems = batchItems.filter(item => item.status === 'PENDING' || item.status === 'ERROR');
+      const targetItems = pendingItems.length > 0 ? pendingItems : batchItems;
+
+      if (targetItems.length === 0) {
+        showToast('กรุณาอัปโหลดรูปใบ OPD อย่างน้อย 1 รูปก่อนเริ่มสแกน', true);
+        return;
+      }
+
+      isBatchProcessing = true;
+      const progressWrapper = document.getElementById('batch-progress-wrapper');
+      const progressText = document.getElementById('batch-progress-text');
+      const progressPercent = document.getElementById('batch-progress-percent');
+      const progressBar = document.getElementById('batch-progress-bar');
+
+      progressWrapper.classList.remove('hidden');
+      progressWrapper.classList.add('flex');
+
+      const newlyExtractedItems = [];
+
+      for (let i = 0; i < targetItems.length; i++) {
+        const item = targetItems[i];
+        item.status = 'PROCESSING';
+        selectedItemId = item.id;
+        updateInspectorImage();
+
+        const pct = Math.round((i / targetItems.length) * 100);
+        progressText.textContent = `กำลังอ่าน OCR รูปที่ ${i + 1} / ${targetItems.length} (${item.fileName})...`;
+        progressPercent.textContent = `${pct}%`;
+        progressBar.style.width = `${Math.max(8, pct)}%`;
+        renderBatchWorkspace();
+
+        try {
+          const extracted = await runSingleImageOCR(item.base64Data, item.mimeType);
+          item.data = extracted;
+          const hasMissingCritical = !extracted.firstName || !extracted.phone || !extracted.serviceDate;
+          item.status = hasMissingCritical ? 'REVIEW' : 'DONE';
+          item.synced = false;
+          newlyExtractedItems.push(item);
+        } catch (err) {
+          console.error('OCR Error on item:', item.fileName, err);
+          item.status = 'ERROR';
+        }
+
+        const donePct = Math.round(((i + 1) / targetItems.length) * 100);
+        progressPercent.textContent = `${donePct}%`;
+        progressBar.style.width = `${donePct}%`;
+        renderBatchWorkspace();
+      }
+
+      progressText.textContent = `สแกนครบ ${targetItems.length} รูปเรียบร้อยแล้ว`;
+      isBatchProcessing = false;
+      renderBatchWorkspace();
+
+      // If Auto-Sync is enabled, push all newly extracted rows directly to Google Sheets tab `raw data`
+      if (autoSyncEnabled && newlyExtractedItems.length > 0) {
+        await pushSpecificRowsToGoogleSheet(newlyExtractedItems, true);
+      } else {
+        showToast(`สแกนเสร็จสิ้น ${newlyExtractedItems.length} รูป พร้อมตรวจสอบในตาราง`);
+      }
+
+      setTimeout(() => {
+        progressWrapper.classList.add('hidden');
+        progressWrapper.classList.remove('flex');
+      }, 2400);
+    }
+
+    async function rescanSelectedSingleItem() {
+      const item = batchItems.find(x => x.id === selectedItemId);
+      if (!item || !item.base64Data || isBatchProcessing) return;
+
+      item.status = 'PROCESSING';
+      renderBatchWorkspace();
+      showToast(`กำลังสแกน ${item.fileName} ซ้ำอีกครั้ง...`);
+
+      try {
+        const extracted = await runSingleImageOCR(item.base64Data, item.mimeType);
+        item.data = extracted;
+        item.status = (!extracted.firstName || !extracted.phone || !extracted.serviceDate) ? 'REVIEW' : 'DONE';
+        item.synced = false;
+        renderBatchWorkspace();
+        if (autoSyncEnabled) {
+          await pushSpecificRowsToGoogleSheet([item], true);
+        } else {
+          showToast(`อัปเดตผลลัพธ์ของ ${item.fileName} เรียบร้อย`);
+        }
+      } catch (e) {
+        item.status = 'ERROR';
+        renderBatchWorkspace();
+        showToast('ไม่สามารถสแกนรูปนี้ได้ กรุณาตรวจสอบรูปภาพหรือการตั้งค่า API', true);
+      }
+    }
+
+    /**
+     * Runs OCR on a single image (via iApp Document OCR if configured, and Gemini Vision Multimodal structured JSON)
+     */
+    async function runSingleImageOCR(base64Data, mimeType) {
+      const customGeminiKey = document.getElementById('custom-gemini-key')?.value?.trim() || '';
+      const customIappKey = document.getElementById('custom-iapp-key')?.value?.trim() || '';
+      let rawIappTranscript = '';
+
+      // 1. Optional iApp Document OCR step
+      if (ocrEngineMode === 'IAPP' && customIappKey) {
+        try {
+          const fd = new FormData();
+          fd.append('base64', base64Data);
+          const iappRes = await fetch('https://api.iapp.co.th/v3/store/ocr/document/ocr', {
+            method: 'POST',
+            headers: { 'apikey': customIappKey },
+            body: fd
+          });
+          if (iappRes.ok) {
+            const iappData = await iappRes.json();
+            rawIappTranscript = Array.isArray(iappData.text) ? iappData.text.join('\n') : '';
+          }
+        } catch (err) {
+          // Fallback to Gemini Vision if CORS blocks direct browser call
+        }
+      }
+
+      // 2. Gemini Vision 9-Field Structured Extraction
+      const apiKey = customGeminiKey || "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const systemPrompt = `คุณคือระบบ AI OCR เวชระเบียนของร้าน Blackpillow Clinic
+อ่านภาพใบ OPD Card ที่ได้รับ (ไม่ว่าจะเป็นแบบฟอร์มรุ่นใดก็ตาม) แล้วสกัดข้อมูลเฉพาะ 9 ฟิลด์ต่อไปนี้เท่านั้น:
+1. firstName (ชื่อ): ตัดคำนำหน้าชื่อ เช่น K., คุณ, นาย, นาง, นางสาว, น.ส. ออกเสมอ หากในใบเขียนชื่อและนามสกุลต่อกันในช่องเดียว ให้แยกเฉพาะชื่อจริงมาไว้ใน firstName
+2. lastName (นามสกุล): หากเขียนชื่อและนามสกุลต่อกัน ให้แยกนามสกุลมาใส่ในฟิลด์นี้ หรือดึงจากช่องนามสกุลโดยตรง
+3. age (อายุ): ตัวเลขจำนวนปี เช่น "19", "47" (หากไม่ระบุแต่มีปีเกิด พ.ศ. ให้คำนวณ 2569 - ปีเกิด)
+4. gender (เพศ): "ญ" หรือ "ช"
+5. nationality (สัญชาติ): เช่น "ไทย"
+6. birthDate (วันเดือนปีเกิด): รูปแบบ dd/mm/yyyy แบบปี พ.ศ. เสมอ เช่น "30 กค 2550" -> "30/07/2550" หรือ "16092522" -> "16/09/2522"
+7. phone (เบอร์โทรศัพท์): ตัวเลข 10 หลักติดกัน 0xxxxxxxxx ห้ามเว้นวรรค ห้ามใส่ขีด หากในใบว่างให้คืนค่า ""
+8. serviceDate (วันเดือนปีที่เข้ารับบริการ): รูปแบบ dd/mm/yyyy แบบปี พ.ศ. เช่น "30/8/69" -> "30/08/2569" หากในใบว่างให้คืนค่า ""
+9. treatments (รายการที่มาทำ): ดึงรายการหัตถการจากช่อง Treatment : หรือตาราง อาการและการรักษา เช่น "Hifu 500 ชอต." หรือ "Fat 40 ml = 2,400"`;
+
+      const userPrompt = rawIappTranscript
+        ? `ข้อความดิบจาก iApp OCR:\n${rawIappTranscript}\n\nสกัดข้อมูลทั้ง 9 ฟิลด์จากภาพใบ OPD และข้อความข้างต้นเป็น JSON`
+        : `สกัดข้อมูลทั้ง 9 ฟิลด์จากภาพใบ OPD นี้เป็น JSON`;
+
+      const payload = {
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: userPrompt },
+            { inlineData: { mimeType: mimeType || 'image/jpeg', data: base64Data } }
+          ]
+        }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              firstName: { type: 'STRING' },
+              lastName: { type: 'STRING' },
+              age: { type: 'STRING' },
+              gender: { type: 'STRING' },
+              nationality: { type: 'STRING' },
+              birthDate: { type: 'STRING' },
+              phone: { type: 'STRING' },
+              serviceDate: { type: 'STRING' },
+              treatments: { type: 'STRING' }
+            },
+            required: ['firstName', 'lastName', 'age', 'gender', 'nationality', 'birthDate', 'phone', 'serviceDate', 'treatments']
+          }
+        }
+      };
+
+      const response = await fetchWithBackoff(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      const jsonStr = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!jsonStr) throw new Error('Invalid OCR JSON response');
+
+      const parsed = JSON.parse(jsonStr);
+      const splitName = normalizeAndSplitName(parsed.firstName, parsed.lastName);
+      const cleanBirth = normalizeToThaiDate(parsed.birthDate);
+      const cleanService = normalizeToThaiDate(parsed.serviceDate);
+      const cleanPhone = normalizePhone(parsed.phone);
+
+      let cleanAge = String(parsed.age || '').replace(/\D/g, '');
+      if (!cleanAge && /^\d{2}\/\d{2}\/25\d{2}$/.test(cleanBirth)) {
+        const by = parseInt(cleanBirth.split('/')[2], 10);
+        cleanAge = String(2569 - by);
+      }
+
+      return {
+        firstName: splitName.firstName,
+        lastName: splitName.lastName,
+        age: cleanAge,
+        gender: normalizeGender(parsed.gender || 'ญ'),
+        nationality: parsed.nationality || 'ไทย',
+        birthDate: cleanBirth,
+        phone: cleanPhone,
+        serviceDate: cleanService,
+        treatments: String(parsed.treatments || '').trim()
+      };
+    }
+
+    // --- 5. SMART DEMO GENERATOR (FOR QUICK WORKFLOW & SHEET SYNC VERIFICATION) ---
+    function createSyntheticOPDCanvas(person) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, 640, 400);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(16, 16, 608, 368);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 28px Plus Jakarta Sans, sans-serif';
+      ctx.fillText('OPD CARD', 36, 58);
+      ctx.font = '600 15px Noto Sans Thai, sans-serif';
+      ctx.fillText('เวชระเบียน BLACKPILLOW CLINIC', 36, 84);
+
+      ctx.font = '500 14px Noto Sans Thai, sans-serif';
+      ctx.fillStyle = '#475569';
+      ctx.fillText(`วัน/เดือน/ปี เกิด: ${person.birthDate}`, 410, 65);
+      ctx.fillText(`ชื่อ-นามสกุล: K. ${person.firstName} ${person.lastName}`, 36, 132);
+      ctx.fillText(`อายุ: ${person.age} ปี    เพศ: ${person.gender}    สัญชาติ: ${person.nationality}`, 36, 168);
+      ctx.fillText(`เบอร์โทรศัพท์: ${person.phone}`, 36, 204);
+      ctx.fillText(`วันที่เข้ารับบริการ: ${person.serviceDate}`, 36, 240);
+
+      ctx.strokeStyle = '#94a5b8';
+      ctx.beginPath();
+      ctx.moveTo(36, 265);
+      ctx.lineTo(604, 265);
+      ctx.stroke();
+
+      ctx.fillStyle = '#1d4ed8';
+      ctx.font = 'bold 18px Noto Sans Thai, sans-serif';
+      ctx.fillText(`รายการที่มาทำ: ${person.treatments}`, 36, 310);
+
+      return canvas.toDataURL('image/jpeg', 0.85);
+    }
+
+    async function generateDemoBatch(count = 3) {
+      const samplePool = [
+        {
+          firstName: 'ภัททบงกช',
+          lastName: 'มนต์',
+          age: '19',
+          gender: 'ญ',
+          nationality: 'ไทย',
+          birthDate: '30/07/2550',
+          phone: '0812345678',
+          serviceDate: '15/11/2569',
+          treatments: 'Hifu 500 ชอต.'
+        },
+        {
+          firstName: 'ธนัญรัตน์',
+          lastName: 'ศรัณย์วงษ์กร',
+          age: '47',
+          gender: 'ญ',
+          nationality: 'ไทย',
+          birthDate: '16/09/2522',
+          phone: '0993289151',
+          serviceDate: '30/08/2569',
+          treatments: 'Fat 40 ml = 2,400'
+        },
+        {
+          firstName: 'พิมพ์ชนก',
+          lastName: 'สุวรรณภูมิ',
+          age: '29',
+          gender: 'ญ',
+          nationality: 'ไทย',
+          birthDate: '12/04/2540',
+          phone: '0897654321',
+          serviceDate: '15/11/2569',
+          treatments: 'Botox กราม 50 U + Meso หน้าใส'
+        }
+      ];
+
+      const remaining = MAX_BATCH_FILES - batchItems.length;
+      if (remaining <= 0) {
+        showToast(`คิวครบ ${MAX_BATCH_FILES} รูปแล้ว`, true);
+        return;
+      }
+
+      const toAdd = Math.min(count, remaining);
+      const addedItems = [];
+
+      for (let i = 0; i < toAdd; i++) {
+        const p = samplePool[i % samplePool.length];
+        const dataUrl = createSyntheticOPDCanvas(p);
+        const item = {
+          id: 'demo_' + Date.now() + '_' + i,
+          fileName: `OPD_Card_${String(batchItems.length + 1).padStart(2, '0')}.jpg`,
+          previewUrl: dataUrl,
+          base64Data: dataUrl.split(',')[1],
+          mimeType: 'image/jpeg',
+          status: 'DONE',
+          synced: false,
+          data: { ...p, gender: normalizeGender(p.gender) }
+        };
+        batchItems.push(item);
+        addedItems.push(item);
+      }
+
+      selectedItemId = addedItems[0]?.id || selectedItemId;
+      renderBatchWorkspace();
+      updateInspectorImage();
+
+      if (autoSyncEnabled) {
+        await pushSpecificRowsToGoogleSheet(addedItems, true);
+      } else {
+        showToast(`เพิ่มข้อมูลทดสอบ ${toAdd} รูปเรียบร้อย`);
+      }
+    }
+
+    // --- 6. RENDERING WORKSPACE (FILMSTRIP + 9-COLUMN TABLE + INSPECTOR) ---
+    function renderBatchWorkspace() {
+      const total = batchItems.length;
+      document.getElementById('sidebar-batch-pill').textContent = `${total}/${MAX_BATCH_FILES}`;
+      document.getElementById('header-batch-counter').textContent = `${total} / ${MAX_BATCH_FILES} รูป`;
+      document.getElementById('table-row-count-badge').textContent = `${total} แถว`;
+
+      const runBtn = document.getElementById('btn-run-batch-ocr');
+      const runLabel = document.getElementById('btn-run-batch-label');
+      runBtn.disabled = total === 0 || isBatchProcessing;
+      runLabel.textContent = isBatchProcessing
+        ? 'กำลังสแกนใบ OPD...'
+        : `สแกนทั้งหมดในคิว (${total} รูป)`;
+
+      // Summary counts
+      const doneCount = batchItems.filter(i => i.status === 'DONE' || i.status === 'SYNCED').length;
+      const reviewCount = batchItems.filter(i => i.status === 'REVIEW').length;
+      document.getElementById('queue-summary-text').textContent =
+        total === 0 ? 'ยังไม่มีรูปในคิว' : `สำเร็จ ${doneCount} • รอตรวจ ${reviewCount}`;
+
+      // 1. Render Left Filmstrip Queue
+      const filmstrip = document.getElementById('batch-filmstrip-list');
+      if (total === 0) {
+        filmstrip.innerHTML = `
+          <div class="py-6 text-center text-xs text-[#7181a6]">
+            อัปโหลดรูปใบ OPD (1–20 รูป) เพื่อแสดงรายการคิวที่นี่
+          </div>
+        `;
+      } else {
+        filmstrip.innerHTML = batchItems.map((item, idx) => {
+          const isSelected = item.id === selectedItemId;
+          const badge = getStatusBadgeHTML(item);
+          const fullName = (item.data.firstName || item.data.lastName)
+            ? `${item.data.firstName} ${item.data.lastName}`.trim()
+            : item.fileName;
+
+          return `
+            <div
+              onclick="selectBatchItem('${item.id}')"
+              class="neu-card-inner p-2.5 flex items-center justify-between gap-3 cursor-pointer transition-all ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50/50' : 'hover:bg-white/60'}"
+            >
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-[11px] font-mono-metric font-bold text-[#7181a6] w-5 text-center">${idx + 1}</span>
+                ${item.previewUrl
+                  ? `<img src="${item.previewUrl}" alt="thumb" class="w-10 h-10 rounded-lg object-cover border border-white flex-shrink-0" />`
+                  : `<div class="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-[10px] font-mono-metric text-slate-600 flex-shrink-0">OPD</div>`
+                }
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-slate-800 truncate">${escapeHtml(fullName)}</p>
+                  <p class="text-[10px] font-mono-metric text-[#7181a6] truncate">${escapeHtml(item.fileName)}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                ${badge}
+                <button
+                  onclick="removeBatchItem('${item.id}', event)"
+                  class="w-6 h-6 rounded-full hover:bg-red-100 text-slate-400 hover:text-red-600 flex items-center justify-center text-xs font-bold"
+                  title="ลบรูปนี้ออกจากคิว"
+                >×</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // 2. Render Right 9-Column Editable Table
+      const tbody = document.getElementById('batch-results-tbody');
+      const filteredItems = batchItems.filter(item => {
+        if (!searchFilterText) return true;
+        const q = searchFilterText.toLowerCase();
+        const d = item.data;
+        const hay = `${d.firstName} ${d.lastName} ${d.phone} ${d.birthDate} ${d.serviceDate} ${d.treatments} ${item.fileName}`.toLowerCase();
+        return hay.includes(q);
+      });
+
+      if (filteredItems.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="11" class="py-16 text-center text-xs text-[#7181a6]">
+              <div class="flex flex-col items-center gap-2">
+                <p class="font-bold text-slate-700 text-sm">ยังไม่มีข้อมูลใบ OPD ในตาราง</p>
+                <p>อัปโหลดรูปใบ OPD (สูงสุด 20 รูป) ที่กล่องด้านซ้าย แล้วกด <strong>"สแกนทั้งหมดในคิว"</strong> เพื่อดึงข้อมูลทั้ง 9 คอลัมน์อัตโนมัติ</p>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filteredItems.map((item, idx) => {
+        const d = item.data;
+        const isSelected = item.id === selectedItemId;
+        const phoneValid = /^0\d{9}$/.test(d.phone);
+        const dobValid = !d.birthDate || /^\d{2}\/\d{2}\/25\d{2}$/.test(d.birthDate);
+        const srvValid = /^\d{2}\/\d{2}\/25\d{2}$/.test(d.serviceDate);
+
+        return `
+          <tr
+            onclick="selectBatchItem('${item.id}')"
+            class="transition-colors ${isSelected ? 'bg-indigo-50/75' : 'hover:bg-white/40'}"
+          >
+            <td class="py-2.5 px-2 text-center font-mono-metric font-bold text-[#7181a6]">${idx + 1}</td>
+
+            <!-- 1. ชื่อ -->
+            <td class="py-2 px-1.5">
+              <input
+                type="text"
+                value="${escapeHtml(d.firstName)}"
+                placeholder="ชื่อ"
+                oninput="updateCellField('${item.id}', 'firstName', this.value)"
+                onblur="autoSplitRowNameIfCombined('${item.id}')"
+                class="neu-input-cell w-full px-2.5 py-1.5 text-xs font-semibold ${!d.firstName ? 'neu-input-warning' : ''}"
+              />
+            </td>
+
+            <!-- 2. นามสกุล -->
+            <td class="py-2 px-1.5">
+              <input
+                type="text"
+                value="${escapeHtml(d.lastName)}"
+                placeholder="นามสกุล"
+                oninput="updateCellField('${item.id}', 'lastName', this.value)"
+                class="neu-input-cell w-full px-2.5 py-1.5 text-xs font-semibold ${!d.lastName ? 'neu-input-warning' : ''}"
+              />
+            </td>
+
+            <!-- 3. อายุ -->
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.age)}"
+                placeholder="อายุ"
+                oninput="updateCellField('${item.id}', 'age', this.value)"
+                class="neu-input-cell font-mono-metric text-center w-full px-1.5 py-1.5 text-xs font-semibold"
+              />
+            </td>
+
+            <!-- 4. เพศ -->
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.gender)}"
+                placeholder="ญ/ช"
+                oninput="updateCellField('${item.id}', 'gender', this.value)"
+                class="neu-input-cell text-center w-full px-1.5 py-1.5 text-xs font-semibold"
+              />
+            </td>
+
+            <!-- 5. สัญชาติ -->
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.nationality)}"
+                placeholder="ไทย"
+                oninput="updateCellField('${item.id}', 'nationality', this.value)"
+                class="neu-input-cell text-center w-full px-1.5 py-1.5 text-xs font-semibold"
+              />
+            </td>
+
+            <!-- 6. วันเดือนปีเกิด (พ.ศ.) -->
+            <td class="py-2 px-1.5">
+              <input
+                type="text"
+                value="${escapeHtml(d.birthDate)}"
+                placeholder="dd/mm/yyyy"
+                oninput="updateCellField('${item.id}', 'birthDate', this.value)"
+                onblur="normalizeCellDate('${item.id}', 'birthDate')"
+                class="neu-input-cell font-mono-metric w-full px-2.5 py-1.5 text-xs font-semibold ${!dobValid ? 'neu-input-error' : ''}"
+              />
+            </td>
+
+            <!-- 7. เบอร์โทรศัพท์ (0xxxxxxxxx) -->
+            <td class="py-2 px-1.5">
+              <input
+                type="text"
+                maxlength="10"
+                value="${escapeHtml(d.phone)}"
+                placeholder="0xxxxxxxxx"
+                oninput="updateCellField('${item.id}', 'phone', this.value)"
+                class="neu-input-cell font-mono-metric w-full px-2.5 py-1.5 text-xs font-semibold ${!d.phone ? 'neu-input-warning' : (!phoneValid ? 'neu-input-error' : '')}"
+              />
+            </td>
+
+            <!-- 8. วันเดือนปีที่เข้ารับบริการ (พ.ศ.) -->
+            <td class="py-2 px-1.5">
+              <input
+                type="text"
+                value="${escapeHtml(d.serviceDate)}"
+                placeholder="dd/mm/yyyy"
+                oninput="updateCellField('${item.id}', 'serviceDate', this.value)"
+                onblur="normalizeCellDate('${item.id}', 'serviceDate')"
+                class="neu-input-cell font-mono-metric w-full px-2.5 py-1.5 text-xs font-semibold ${!d.serviceDate ? 'neu-input-warning' : (!srvValid ? 'neu-input-error' : '')}"
+              />
+            </td>
+
+            <!-- 9. รายการที่มาทำ -->
+            <td class="py-2 px-1.5">
+              <input
+                type="text"
+                value="${escapeHtml(d.treatments)}"
+                placeholder="ระบุหัตถการ / รายการที่มาทำ"
+                oninput="updateCellField('${item.id}', 'treatments', this.value)"
+                class="neu-input-cell w-full px-2.5 py-1.5 text-xs font-semibold"
+              />
+            </td>
+
+            <!-- สถานะ Sync -->
+            <td class="py-2 px-2 text-center">
+              ${item.synced
+                ? `<span class="text-[10px] font-mono-metric font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">ลง raw data แล้ว</span>`
+                : `<button onclick="pushSingleRowById('${item.id}', event)" class="neu-btn px-2.5 py-1 text-[10px] font-semibold text-indigo-700">ส่งขึ้น Sheet</button>`
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function getStatusBadgeHTML(item) {
+      if (item.synced) {
+        return `<span class="text-[10px] font-mono-metric font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Sync แล้ว</span>`;
+      }
+      switch (item.status) {
+        case 'PROCESSING':
+          return `<span class="text-[10px] font-mono-metric font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 animate-pulse">กำลังอ่าน...</span>`;
+        case 'DONE':
+          return `<span class="text-[10px] font-mono-metric font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800">สำเร็จ</span>`;
+        case 'REVIEW':
+          return `<span class="text-[10px] font-mono-metric font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">รอเติมช่องว่าง</span>`;
+        case 'ERROR':
+          return `<span class="text-[10px] font-mono-metric font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800">สแกนไม่ผ่าน</span>`;
+        default:
+          return `<span class="text-[10px] font-mono-metric font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">รอสแกน</span>`;
+      }
+    }
+
+    // --- 7. TABLE CELL EDITING & BULK HELPERS ---
+    function updateCellField(itemId, field, rawVal) {
+      const item = batchItems.find(x => x.id === itemId);
+      if (!item) return;
+
+      if (field === 'phone') {
+        item.data.phone = String(rawVal).replace(/\D/g, '').slice(0, 10);
+      } else {
+        item.data[field] = rawVal;
+      }
+      item.synced = false;
+    }
+
+    function autoSplitRowNameIfCombined(itemId) {
+      const item = batchItems.find(x => x.id === itemId);
+      if (!item) return;
+      const res = normalizeAndSplitName(item.data.firstName, item.data.lastName);
+      if (res.firstName !== item.data.firstName || res.lastName !== item.data.lastName) {
+        item.data.firstName = res.firstName;
+        item.data.lastName = res.lastName;
+        renderBatchWorkspace();
+        showToast(`แยกชื่อ "${res.firstName}" และนามสกุล "${res.lastName}" อัตโนมัติ`);
+      }
+    }
+
+    function normalizeCellDate(itemId, fieldKey) {
+      const item = batchItems.find(x => x.id === itemId);
+      if (!item) return;
+      const norm = normalizeToThaiDate(item.data[fieldKey]);
+      if (norm !== item.data[fieldKey]) {
+        item.data[fieldKey] = norm;
+      }
+      renderBatchWorkspace();
+    }
+
+    function fillEmptyServiceDatesToday() {
+      const todayBE = '15/11/2569';
+      let count = 0;
+      batchItems.forEach(item => {
+        if (!item.data.serviceDate) {
+          item.data.serviceDate = todayBE;
+          item.synced = false;
+          count++;
+        }
+      });
+      renderBatchWorkspace();
+      showToast(count > 0 ? `เติมวันที่รับบริการ (${todayBE}) จำนวน ${count} แถวเรียบร้อย` : 'ทุกแถวมีวันที่รับบริการอยู่แล้ว');
+    }
+
+    function toggleGenderDisplayMode() {
+      genderShortMode = !genderShortMode;
+      document.getElementById('btn-gender-mode').textContent = genderShortMode ? 'เพศ: ญ / ช' : 'เพศ: หญิง / ชาย';
+      batchItems.forEach(item => {
+        item.data.gender = normalizeGender(item.data.gender);
+      });
+      renderBatchWorkspace();
+    }
+
+    function addBlankRowToBatch() {
+      if (batchItems.length >= MAX_BATCH_FILES) {
+        showToast(`จำกัดสูงสุด ${MAX_BATCH_FILES} แถวต่อรอบ`, true);
+        return;
+      }
+      const newItem = {
+        id: 'manual_' + Date.now(),
+        fileName: `กรอกข้อมูลเอง #${batchItems.length + 1}`,
+        previewUrl: '',
+        base64Data: '',
+        mimeType: '',
+        status: 'REVIEW',
+        synced: false,
+        data: {
+          firstName: '',
+          lastName: '',
+          age: '',
+          gender: genderShortMode ? 'ญ' : 'หญิง',
+          nationality: 'ไทย',
+          birthDate: '',
+          phone: '',
+          serviceDate: '15/11/2569',
+          treatments: ''
+        }
+      };
+      batchItems.push(newItem);
+      selectedItemId = newItem.id;
+      renderBatchWorkspace();
+      updateInspectorImage();
+    }
+
+    function selectBatchItem(itemId) {
+      selectedItemId = itemId;
+      renderBatchWorkspace();
+      updateInspectorImage();
+    }
+
+    function removeBatchItem(itemId, ev) {
+      if (ev) ev.stopPropagation();
+      batchItems = batchItems.filter(x => x.id !== itemId);
+      if (selectedItemId === itemId) {
+        selectedItemId = batchItems[0]?.id || null;
+      }
+      renderBatchWorkspace();
+      updateInspectorImage();
+    }
+
+    function clearBatchQueue() {
+      batchItems = [];
+      selectedItemId = null;
+      renderBatchWorkspace();
+      updateInspectorImage();
+      showToast('ล้างคิวรูปภาพทั้งหมดแล้ว');
+    }
+
+    // --- 8. IMAGE INSPECTOR CONTROLS (ZOOM / ROTATE / CONTRAST) ---
+    function updateInspectorImage() {
+      const item = batchItems.find(x => x.id === selectedItemId);
+      const emptyEl = document.getElementById('inspector-empty-state');
+      const imgEl = document.getElementById('inspector-img-el');
+      const nameEl = document.getElementById('inspector-filename');
+      const statusEl = document.getElementById('inspector-status-text');
+      const rescanBtn = document.getElementById('btn-rescan-single');
+
+      if (!item || !item.previewUrl) {
+        emptyEl.classList.remove('hidden');
+        imgEl.classList.add('hidden');
+        nameEl.textContent = item ? item.fileName : 'คลิกที่รูปในคิวหรือคลิกแถวในตารางเพื่อดูภาพขยาย';
+        statusEl.textContent = 'สถานะ: ไม่มีภาพตัวอย่าง';
+        rescanBtn.disabled = true;
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      imgEl.classList.remove('hidden');
+      imgEl.src = item.previewUrl;
+      nameEl.textContent = item.fileName;
+      statusEl.textContent = item.synced ? 'สถานะ: บันทึกลงแท็บ raw data แล้ว' : `สถานะ: ${item.status}`;
+      rescanBtn.disabled = !item.base64Data || isBatchProcessing;
+      applyInspectorTransform();
+    }
+
+    function applyInspectorTransform() {
+      const imgEl = document.getElementById('inspector-img-el');
+      if (!imgEl) return;
+      imgEl.style.transform = `scale(${inspectorZoom}) rotate(${inspectorRotation}deg)`;
+      imgEl.style.filter = inspectorContrast ? 'contrast(1.45) brightness(1.04) saturate(1.2)' : 'none';
+    }
+
+    function adjustInspectorZoom(delta) {
+      inspectorZoom = Math.min(3, Math.max(0.5, inspectorZoom + delta));
+      applyInspectorTransform();
+    }
+
+    function rotateInspectorImage() {
+      inspectorRotation = (inspectorRotation + 90) % 360;
+      applyInspectorTransform();
+    }
+
+    function toggleInspectorContrast() {
+      inspectorContrast = !inspectorContrast;
+      const btn = document.getElementById('btn-inspector-contrast');
+      btn.classList.toggle('text-indigo-600', inspectorContrast);
+      applyInspectorTransform();
+    }
+
+    function resetInspectorView() {
+      inspectorZoom = 1;
+      inspectorRotation = 0;
+      inspectorContrast = false;
+      applyInspectorTransform();
+    }
+
+    // --- 9. AUTOMATIC & MANUAL SYNC TO GOOGLE SHEETS (`raw data`) ---
+    function toggleAutoSync() {
+      autoSyncEnabled = !autoSyncEnabled;
+      const track = document.getElementById('autosync-toggle-track');
+      const sub = document.getElementById('autosync-status-sub');
+      if (autoSyncEnabled) {
+        track.classList.add('checked');
+        sub.textContent = 'ทำงานอัตโนมัติทันทีที่สแกนเสร็จ';
+        sub.className = 'text-[10px] text-emerald-700 font-medium';
+      } else {
+        track.classList.remove('checked');
+        sub.textContent = 'ปิดชั่วคราว (กดส่งเองเมื่อตรวจสอบเสร็จ)';
+        sub.className = 'text-[10px] text-[#7181a6] font-medium';
+      }
+    }
+
+    function saveGasWebhookUrl(url) {
+      const clean = String(url || '').trim();
+      localStorage.setItem('bp_rawdata_webhook_url', clean);
+      updateWebhookIndicators();
+    }
+
+    function getGasWebhookUrl() {
+      return localStorage.getItem('bp_rawdata_webhook_url') || document.getElementById('gas-webapp-url')?.value?.trim() || '';
+    }
+
+    function updateWebhookIndicators() {
+      const url = getGasWebhookUrl();
+      const dot = document.getElementById('sidebar-webhook-dot');
+      const syncMsg = document.getElementById('sync-status-message');
+      if (url) {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+        syncMsg.textContent = 'เชื่อมต่อ Web App URL แล้ว (พร้อมส่งเข้าแท็บ raw data อัตโนมัติ)';
+      } else {
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+        syncMsg.textContent = 'ยังไม่ได้ระบุ Web App URL (คลิกเมนู "เชื่อมต่อแท็บ raw data" หรือใช้ปุ่มคัดลอกวาง TSV)';
+      }
+    }
+
+    async function pushSpecificRowsToGoogleSheet(itemsToPush, isAutomatic = false) {
+      if (!itemsToPush || itemsToPush.length === 0) return;
+
+      const webhookUrl = getGasWebhookUrl();
+      if (!webhookUrl) {
+        if (!isAutomatic) {
+          switchMacroView('sheet-setup');
+          showToast('กรุณาวาง Web App URL ของ Google Apps Script เพื่อส่งเข้าแท็บ raw data อัตโนมัติ', true);
+        } else {
+          // Automatically copy TSV to clipboard as fallback so user can immediately paste into `raw data`
+          copyAllForRawDataSheet(true);
+          showToast(`สแกนเสร็จ ${itemsToPush.length} รูป! คัดลอกข้อมูลใส่คลิปบอร์ดให้แล้ว (ตั้งค่า Web App URL เพื่อส่งเข้า raw data อัตโนมัติ)`);
+        }
+        return;
+      }
+
+      const syncMsg = document.getElementById('sync-status-message');
+      syncMsg.textContent = `กำลังส่งข้อมูล ${itemsToPush.length} แถวเข้าแท็บ raw data...`;
+
+      const payload = {
+        spreadsheetId: TARGET_SPREADSHEET_ID,
+        sheetName: TARGET_SHEET_TAB,
+        rows: itemsToPush.map(item => ({
+          firstName: item.data.firstName || '',
+          lastName: item.data.lastName || '',
+          age: item.data.age || '',
+          gender: item.data.gender || '',
+          nationality: item.data.nationality || 'ไทย',
+          birthDate: item.data.birthDate || '',
+          phone: normalizePhone(item.data.phone),
+          serviceDate: item.data.serviceDate || '',
+          treatments: item.data.treatments || ''
+        }))
+      };
+
+      try {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        itemsToPush.forEach(item => {
+          item.synced = true;
+          item.status = 'SYNCED';
+        });
+        renderBatchWorkspace();
+        updateInspectorImage();
+        syncMsg.textContent = `ส่งข้อมูล ${itemsToPush.length} แถวลงแท็บ raw data สำเร็จเมื่อ ${new Date().toLocaleTimeString('th-TH')}`;
+        showToast(`ส่งข้อมูล ${itemsToPush.length} แถวเข้า Google Sheet แท็บ "raw data" เรียบร้อย!`);
+      } catch (err) {
+        console.error('Webhook sync error:', err);
+        syncMsg.textContent = 'เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาตรวจสอบ Web App URL';
+        showToast('ส่งข้อมูลไปที่ Google Sheet ไม่สำเร็จ กรุณาตรวจสอบ Web App URL', true);
+      }
+    }
+
+    async function pushAllRowsToGoogleSheet(onlyUnsynced = false) {
+      if (batchItems.length === 0) {
+        showToast('ไม่มีข้อมูลในตารางสำหรับส่งเข้า Google Sheet', true);
+        return;
+      }
+      const target = onlyUnsynced ? batchItems.filter(i => !i.synced) : batchItems;
+      await pushSpecificRowsToGoogleSheet(target, false);
+    }
+
+    async function pushSingleRowById(itemId, ev) {
+      if (ev) ev.stopPropagation();
+      const item = batchItems.find(x => x.id === itemId);
+      if (item) await pushSpecificRowsToGoogleSheet([item], false);
+    }
+
+    async function sendTestRowToRawData() {
+      const webhookUrl = getGasWebhookUrl();
+      if (!webhookUrl) {
+        showToast('กรุณาวาง Web App URL ในช่องด้านบนก่อนกดทดสอบ', true);
+        document.getElementById('gas-webapp-url')?.focus();
+        return;
+      }
+
+      const testItem = {
+        id: 'test_row',
+        status: 'DONE',
+        synced: false,
+        data: {
+          firstName: 'ธนัญรัตน์',
+          lastName: 'ศรัณย์วงษ์กร',
+          age: '47',
+          gender: 'ญ',
+          nationality: 'ไทย',
+          birthDate: '16/09/2522',
+          phone: '0993289151',
+          serviceDate: '30/08/2569',
+          treatments: 'Fat 40 ml = 2,400'
+        }
+      };
+
+      await pushSpecificRowsToGoogleSheet([testItem], false);
+    }
+
+    // --- 10. CLIPBOARD TSV & CSV EXPORT (PRESERVING LEADING ZERO ON PHONE NUMBERS) ---
+    function copyTextToClipboard(text, toastMsg) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        if (toastMsg) showToast(toastMsg);
+      } catch (e) {
+        showToast('ไม่สามารถคัดลอกลงคลิปบอร์ดได้', true);
+      }
+      document.body.removeChild(ta);
+    }
+
+    function copyAllForRawDataSheet(silentToast = false) {
+      if (batchItems.length === 0) {
+        if (!silentToast) showToast('ยังไม่มีข้อมูลในตารางให้คัดลอก', true);
+        return;
+      }
+
+      const rows = batchItems.map(item => {
+        const d = item.data;
+        const phoneWithQuote = d.phone ? `'${normalizePhone(d.phone)}` : '';
+        return [
+          d.firstName || '',
+          d.lastName || '',
+          d.age || '',
+          d.gender || '',
+          d.nationality || 'ไทย',
+          d.birthDate || '',
+          phoneWithQuote,
+          d.serviceDate || '',
+          d.treatments || ''
+        ].join('\t');
+      });
+
+      copyTextToClipboard(
+        rows.join('\n'),
+        silentToast ? '' : `คัดลอกข้อมูล ${batchItems.length} แถว (9 คอลัมน์) พร้อมวางในแท็บ raw data แล้ว!`
+      );
+    }
+
+    function copyRawDataAppsScript() {
+      const code = document.getElementById('raw-data-gas-code')?.innerText || '';
+      copyTextToClipboard(code, 'คัดลอกโค้ด Code.gs สำหรับแท็บ raw data เรียบร้อย');
+    }
+
+    function exportBatchCSV() {
+      if (batchItems.length === 0) {
+        showToast('ยังไม่มีข้อมูลสำหรับดาวน์โหลด CSV', true);
+        return;
+      }
+
+      const headers = ['ชื่อ', 'นามสกุล', 'อายุ', 'เพศ', 'สัญชาติ', 'วันเดือนปีเกิด', 'เบอร์โทรศัพท์', 'วันเดือนปีที่เข้ารับบริการ', 'รายการที่มาทำ'];
+      const csvLines = [headers.join(',')];
+
+      batchItems.forEach(item => {
+        const d = item.data;
+        const phoneCell = d.phone ? `"=""${normalizePhone(d.phone)}"""` : '""';
+        const line = [
+          `"${(d.firstName || '').replace(/"/g, '""')}"`,
+          `"${(d.lastName || '').replace(/"/g, '""')}"`,
+          `"${d.age || ''}"`,
+          `"${d.gender || ''}"`,
+          `"${d.nationality || 'ไทย'}"`,
+          `"${d.birthDate || ''}"`,
+          phoneCell,
+          `"${d.serviceDate || ''}"`,
+          `"${(d.treatments || '').replace(/"/g, '""')}"`
+        ];
+        csvLines.push(line.join(','));
+      });
+
+      const blob = new Blob(['\uFEFF' + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Blackpillow_raw_data_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('ดาวน์โหลดไฟล์ CSV (9 คอลัมน์ตรงตามแท็บ raw data) เรียบร้อย');
+    }
+
+    // --- 11. NAVIGATION & SETTINGS PERSISTENCE ---
+    function switchMacroView(viewKey) {
+      ['batch', 'sheet-setup', 'api-settings'].forEach(k => {
+        const sec = document.getElementById(`view-${k}`);
+        const nav = document.getElementById(`nav-${k}`);
+        if (k === viewKey) {
+          sec.classList.remove('hidden');
+          sec.classList.add('grid');
+          nav.classList.add('active');
+        } else {
+          sec.classList.add('hidden');
+          sec.classList.remove('grid');
+          nav.classList.remove('active');
+        }
+      });
+    }
+
+    function setOcrEngineMode(mode) {
+      ocrEngineMode = mode;
+      const gCard = document.getElementById('engine-option-gemini');
+      const iCard = document.getElementById('engine-option-iapp');
+      const lbl = document.getElementById('sidebar-engine-label');
+      if (mode === 'GEMINI') {
+        gCard.classList.add('border-indigo-500/80');
+        iCard.classList.remove('border-indigo-500/80');
+        lbl.textContent = 'Gemini Vision';
+      } else {
+        iCard.classList.add('border-indigo-500/80');
+        gCard.classList.remove('border-indigo-500/80');
+        lbl.textContent = 'iApp /ocr';
+      }
+      showToast(`สลับโหมด OCR เป็น ${lbl.textContent} แล้ว`);
+    }
+
+    function saveApiKeysToStorage() {
+      const gKey = document.getElementById('custom-gemini-key')?.value?.trim() || '';
+      const iKey = document.getElementById('custom-iapp-key')?.value?.trim() || '';
+      localStorage.setItem('bp_gemini_api_key', gKey);
+      localStorage.setItem('bp_iapp_api_key', iKey);
+    }
+
+    function handleSearchFilter(val) {
+      searchFilterText = String(val || '').trim();
+      renderBatchWorkspace();
+    }
+
+    function showToast(msg, isWarning = false) {
+      if (!msg) return;
+      const container = document.getElementById('toast-container');
+      const text = document.getElementById('toast-message');
+      const dot = document.getElementById('toast-dot');
+      text.textContent = msg;
+      dot.className = isWarning ? 'w-2.5 h-2.5 rounded-full bg-amber-500' : 'w-2.5 h-2.5 rounded-full bg-indigo-600';
+      container.classList.remove('opacity-0', 'translate-y-4');
+      clearTimeout(window.__bpToastTimer);
+      window.__bpToastTimer = setTimeout(() => {
+        container.classList.add('opacity-0', 'translate-y-4');
+      }, 3400);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    window.onload = function () {
+      const savedWebhook = localStorage.getItem('bp_rawdata_webhook_url') || '';
+      const savedGemini = localStorage.getItem('bp_gemini_api_key') || '';
+      const savedIapp = localStorage.getItem('bp_iapp_api_key') || '';
+
+      if (savedWebhook) document.getElementById('gas-webapp-url').value = savedWebhook;
+      if (savedGemini) document.getElementById('custom-gemini-key').value = savedGemini;
+      if (savedIapp) document.getElementById('custom-iapp-key').value = savedIapp;
+
+      updateWebhookIndicators();
+      renderBatchWorkspace();
+    };
+  </script>
+</body>
+</html>
