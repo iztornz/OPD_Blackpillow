@@ -1,435 +1,1633 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blackpillow OPD Batch OCR - Gemini 4 Hydrogen</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', sans-serif; background: linear-gradient(145deg, #e8edfc, #f2f5ff); color: #1e293b; min-height: 100vh; }
-        .neumorphic-card { background: linear-gradient(145deg, #e8edfc, #f2f5ff); box-shadow: 12px 12px 24px #ccd4f0, -12px -12px 24px #ffffff; border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.72); }
-        .neumorphic-input { background: linear-gradient(145deg, #e8edfc, #f2f5ff); border: 1px solid rgba(255, 255, 255, 0.72); box-shadow: inset 6px 6px 12px #ccd4f0, inset -6px -6px 12px #ffffff; border-radius: 50px; }
-        .neumorphic-pill { background: linear-gradient(105deg, #43c9ff, #497bff 48%, #9b38ff); box-shadow: 0 8px 15px rgba(107, 114, 237, 0.3), inset 0 2px 2px rgba(255, 255, 255, 0.46), inset 0 -3px 5px rgba(91, 53, 221, 0.27); border-radius: 50px; color: white; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blackpillow OPD Scanner</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Plus Jakarta Sans, Noto Sans Thai, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-canvas: #ecf0fb;
+      --surface-card: linear-gradient(145deg, #e8edfc, #f2f5ff);
+      --border-specular: 1px solid #ffffffb8;
+      --border-cta: 1px solid #ffffff65;
+      --text-primary: #1e293b;
+      --text-muted: #7181a6;
+
+      --shadow-extruded: 12px 12px 24px #ccd4f0, -12px -12px 24px #ffffff;
+      --shadow-extruded-sm: 6px 6px 14px #ccd4f0, -6px -6px 14px #ffffff;
+      --shadow-extruded-hover: 14px 14px 28px #c3cce9, -14px -14px 28px #ffffff;
+      --shadow-inset: inset 6px 6px 12px #ccd4f0, inset -6px -6px 12px #ffffff;
+      --shadow-inset-sm: inset 4px 4px 8px #ccd4f0, inset -4px -4px 8px #ffffff;
+
+      --gradient-primary: linear-gradient(105deg, #43c9ff, #497bff 48%, #9b38ff);
+      --shadow-cta: 0 8px 15px #6b72ed4d, inset 0 2px 2px #ffffff75, inset 0 -3px 5px #5b35dd45;
+      --shadow-cta-hover: 0 12px 22px #6b72ed66, inset 0 2px 3px #ffffff90, inset 0 -3px 6px #5b35dd55;
+
+      --ease-recovery: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', 'Noto Sans Thai', sans-serif;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .font-mono-num {
+      font-family: 'JetBrains Mono', 'Noto Sans Thai', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Extruded Neumorphic Card */
+    .neu-card {
+      background: var(--surface-card);
+      border-radius: 24px;
+      border: var(--border-specular);
+      box-shadow: var(--shadow-extruded);
+    }
+
+    /* Recessed Well / Dropzone */
+    .neu-well {
+      background: var(--surface-card);
+      border-radius: 20px;
+      border: var(--border-specular);
+      box-shadow: var(--shadow-inset);
+    }
+
+    /* Recessed Input */
+    .neu-input {
+      background: var(--surface-card);
+      border-radius: 50px;
+      border: var(--border-specular);
+      box-shadow: var(--shadow-inset);
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .neu-cell-input {
+      background: var(--surface-card);
+      border-radius: 50px;
+      border: var(--border-specular);
+      box-shadow: var(--shadow-inset);
+      color: var(--text-primary);
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .neu-input::placeholder,
+    .neu-cell-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .neu-input:focus,
+    .neu-cell-input:focus {
+      box-shadow: var(--shadow-inset), 0 0 0 2px rgba(73, 123, 255, 0.35);
+    }
+
+    /* Secondary Tactile Button */
+    .neu-btn {
+      background: var(--surface-card);
+      border-radius: 50px;
+      border: var(--border-specular);
+      box-shadow: var(--shadow-extruded-sm);
+      color: var(--text-primary);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s var(--ease-recovery), box-shadow 0.3s var(--ease-recovery);
+    }
+
+    .neu-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-extruded-hover);
+    }
+
+    .neu-btn:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: var(--shadow-inset-sm);
+      transition: transform 80ms ease, box-shadow 80ms ease;
+    }
+
+    .neu-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Primary Gradient CTA Button */
+    .neu-btn-confirm {
+      background: var(--gradient-primary);
+      border-radius: 50px;
+      border: var(--border-cta);
+      box-shadow: var(--shadow-cta);
+      color: #ffffff;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s var(--ease-recovery), box-shadow 0.3s var(--ease-recovery), filter 0.2s ease;
+    }
+
+    .neu-btn-confirm:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-cta-hover);
+      filter: brightness(1.04);
+    }
+
+    .neu-btn-confirm:active:not(:disabled) {
+      transform: scale(0.98);
+      box-shadow: inset 0 4px 10px rgba(45, 20, 120, 0.55);
+      transition: transform 80ms ease, box-shadow 80ms ease;
+    }
+
+    .neu-btn-confirm:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(0.35);
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .progress-shimmer {
+      background: linear-gradient(90deg, #43c9ff 15%, #9b38ff 50%, #43c9ff 85%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+    }
+
+    .row-active {
+      background: rgba(73, 123, 255, 0.09);
+    }
+  </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-7xl mx-auto space-y-6">
-        <!-- Header -->
-        <div class="neumorphic-card p-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                    <span class="bg-indigo-600 text-white px-3 py-1 rounded-xl text-sm">BP</span> 
-                    Blackpillow OPD Scanner
-                </h1>
-                <p class="text-sm text-slate-500 mt-1">ล็อกโมเดล <span class="font-semibold text-indigo-600">Gemini 4 Hydrogen</span> อย่างเดียว 100%</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <span id="keyStatus" class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Vertex AI Key พร้อมใช้งาน</span>
-                <a href="https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit?gid=0#gid=0" target="_blank" class="px-4 py-2 text-sm font-semibold neumorphic-pill hover:opacity-90 transition">
-                    เปิด Google Sheets (raw data) ↗
-                </a>
-            </div>
+<body class="min-h-screen py-6 px-4 sm:px-6 lg:px-10 max-w-7xl mx-auto flex flex-col gap-6">
+
+  <!-- ================= TOP HEADER BAR WITH LOCALSTORAGE API KEY VAULT ================= -->
+  <header class="neu-card px-6 py-4 flex flex-col gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl neu-btn-confirm flex items-center justify-center font-extrabold text-lg shadow-md shrink-0">
+          BP
         </div>
-
-        <!-- API Key Configuration Panel -->
-        <div class="neumorphic-card p-6 space-y-4">
-            <div class="flex flex-col md:flex-row items-center gap-4">
-                <div class="w-full md:w-1/4 font-semibold text-slate-700 text-sm">Vertex / Gemini Key:</div>
-                <div class="w-full md:w-2/4">
-                    <input type="password" id="apiKeyInput" class="w-full px-6 py-3 neumorphic-input text-sm text-slate-700 focus:outline-none" placeholder="AQ.Ab8RN6K-_SCDqNUNQuLC2ktPlB0Sou7DEyonL91Uj1qzpqC6zA">
-                </div>
-                <div class="w-full md:w-1/4 flex items-center gap-2">
-                    <button onclick="saveApiKey()" class="flex-1 py-2 px-4 text-xs font-semibold bg-indigo-600 text-white rounded-full shadow hover:bg-indigo-700 transition">บันทึก Key</button>
-                    <button onclick="testApiKey()" class="flex-1 py-2 px-4 text-xs font-semibold bg-slate-200 text-slate-700 rounded-full hover:bg-slate-300 transition">ทดสอบ Key</button>
-                </div>
-            </div>
-            <div id="alertBox" class="hidden p-4 rounded-xl text-sm"></div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-lg font-extrabold tracking-tight text-slate-800">Blackpillow OPD Scanner</h1>
+            <span id="key-status-pill" class="px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-emerald-700 flex items-center gap-1.5">
+              <span id="key-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="key-status-text">Vertex AI • aiplatform.googleapis.com</span>
+            </span>
+          </div>
+          <p class="text-xs text-[#7181a6] mt-1">
+            อัปโหลดรูปสูงสุด 20 รูป &rarr; กด Confirm สแกนข้อมูล (Vertex AI) &rarr; กด Confirm ส่งเข้าแท็บ <span class="font-mono-num font-semibold text-slate-700">raw data</span>
+          </p>
         </div>
+      </div>
 
-        <!-- Step 1: Upload & Scan -->
-        <div class="neumorphic-card p-6 space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">1</span> 
-                    อัปโหลดรูปใบ OPD (สูงสุด 20 รูป)
-                </h2>
-                <div class="flex items-center gap-3">
-                    <span id="fileCountText" class="text-xs font-semibold text-slate-500">0 / 20 รูป</span>
-                    <button onclick="clearAll()" class="px-3 py-1 text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded-full font-semibold transition">ล้างรายการ</button>
-                </div>
-            </div>
-
-            <div id="dropZone" class="border-2 border-dashed border-indigo-200 rounded-2xl p-8 text-center cursor-pointer hover:border-indigo-400 transition bg-white/40">
-                <input type="file" id="fileInput" multiple accept="image/*" class="hidden" onchange="handleFiles(this.files)">
-                <div class="space-y-2" onclick="document.getElementById('fileInput').click()">
-                    <div class="w-12 h-12 mx-auto rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold">↑</div>
-                    <p class="text-sm font-semibold text-slate-700">แตะเพื่อเลือกรูปใบ OPD หรือลากรูปมาวาง</p>
-                    <p class="text-xs text-slate-400">ประมวลผลด้วยโมเดล Gemini 4 Hydrogen เท่านั้น</p>
-                </div>
-            </div>
-
-            <!-- Thumbnail Queue -->
-            <div id="thumbnailContainer" class="flex gap-3 overflow-x-auto pb-2 min-h-[90px] items-center"></div>
-
-            <div class="flex justify-end pt-2">
-                <button id="scanBtn" onclick="startScanBatch()" disabled class="px-8 py-3 text-sm font-bold neumorphic-pill opacity-50 cursor-not-allowed transition">
-                    1. Confirm สแกนข้อมูล (Hydrogen)
-                </button>
-            </div>
-        </div>
-
-        <!-- Step 2: Review & Submit to Sheets -->
-        <div class="neumorphic-card p-6 space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">2</span> 
-                    ตรวจสอบผลลัพธ์และส่งเข้า Google Sheets (raw data)
-                </h2>
-                <span id="resultCountText" class="text-xs font-semibold text-slate-500">0 รายการ</span>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Image Inspector -->
-                <div class="lg:col-span-1 neumorphic-card p-4 flex flex-col items-center justify-center bg-white/30 min-h-[300px]">
-                    <div id="previewInspector" class="text-center text-slate-400 text-sm">
-                        คลิกแถวในตารางเพื่อดูรูปต้นฉบับ
-                    </div>
-                </div>
-
-                <!-- Editable Table -->
-                <div class="lg:col-span-2 overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-slate-600 bg-slate-100/50">
-                                <th class="p-2">#</th>
-                                <th class="p-2">ชื่อ</th>
-                                <th class="p-2">นามสกุล</th>
-                                <th class="p-2">อายุ</th>
-                                <th class="p-2">เพศ</th>
-                                <th class="p-2">สัญชาติ</th>
-                                <th class="p-2">วันเกิด (พ.ศ.)</th>
-                                <th class="p-2">เบอร์โทร</th>
-                                <th class="p-2">วันรับบริการ</th>
-                                <th class="p-2">รายการที่มาทำ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultTableBody">
-                            <tr>
-                                <td colspan="10" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลผลการสแกน</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="flex justify-end pt-4">
-                <button id="submitBtn" onclick="submitToGoogleSheets()" disabled class="px-8 py-3 text-sm font-bold neumorphic-pill opacity-50 cursor-not-allowed transition">
-                    2. Confirm ส่งข้อมูลเข้า Google Sheets (raw data)
-                </button>
-            </div>
-        </div>
+      <div class="flex items-center gap-2.5 self-end sm:self-auto">
+        <span id="endpoint-route-badge" class="px-3.5 py-2 rounded-full text-[11px] font-mono-num font-extrabold neu-input text-indigo-700">
+          Endpoint: aiplatform.googleapis.com
+        </span>
+        <a
+          href="https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit?gid=0#gid=0"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="neu-btn px-4 py-2 text-xs font-bold text-slate-700 flex items-center gap-1.5 shrink-0"
+        >
+          <span>เปิด Google Sheets (raw data)</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+          </svg>
+        </a>
+      </div>
     </div>
 
-    <script>
-        const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyHiyXU4KRZI_yfzzUyddkM9650jcOIQgvM7_ALoz9d8qdsVlnJjMLJlpIJx7ikYiDZ/exec';
-        const DEFAULT_KEY = 'AQ.Ab8RN6K-_SCDqNUNQuLC2ktPlB0Sou7DEyonL91Uj1qzpqC6zA';
-        
-        let uploadedFiles = [];
+    <!-- LocalStorage API Key Input Bar -->
+    <div class="pt-3 border-t border-slate-300/60 flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-xs font-extrabold text-slate-700">Vertex / Gemini Key (Local):</span>
+      </div>
+      <div class="relative flex-1">
+        <input
+          id="local-api-key-input"
+          type="password"
+          placeholder="วาง API Key ที่นี่ (เช่น AQ.Ab8... สำหรับ Vertex AI หรือ AIzaSy...)"
+          oninput="onApiKeyInputTyping()"
+          class="neu-input w-full pl-4 pr-16 py-2 text-xs font-mono-num font-semibold"
+        />
+        <button
+          type="button"
+          onclick="toggleApiKeyVisibility()"
+          id="btn-toggle-key-vis"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-indigo-700 hover:underline"
+        >
+          แสดง
+        </button>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onclick="saveApiKeyToLocal()"
+          class="neu-btn px-4 py-2 text-xs font-extrabold text-indigo-700"
+        >
+          บันทึก Key ลงเครื่อง
+        </button>
+        <button
+          type="button"
+          id="btn-test-key"
+          onclick="testLocalApiKey()"
+          class="neu-btn px-4 py-2 text-xs font-bold text-emerald-700"
+        >
+          ทดสอบ Key (Vertex AI)
+        </button>
+        <button
+          type="button"
+          onclick="resetDefaultVertexKey()"
+          class="neu-btn px-3.5 py-2 text-xs font-bold text-slate-600"
+          title="คืนค่าคีย์ AQ.Ab8... เริ่มต้น"
+        >
+          ค่าเริ่มต้น
+        </button>
+      </div>
+    </div>
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedKey = localStorage.getItem('BP_GEMINI_API_KEY_LOCAL') || DEFAULT_KEY;
-            document.getElementById('apiKeyInput').value = savedKey;
-            localStorage.setItem('BP_GEMINI_API_KEY_LOCAL', savedKey);
-        });
+    <!-- API Error / Status Diagnostic Banner -->
+    <div id="api-error-banner" class="hidden neu-well p-3.5 border-l-4 border-l-rose-500 text-xs text-rose-700 font-semibold flex items-center justify-between gap-3">
+      <div id="api-error-message"></div>
+      <button
+        type="button"
+        onclick="hideApiErrorBanner()"
+        class="neu-btn px-3 py-1.5 text-[11px] font-extrabold text-slate-700 shrink-0"
+      >
+        ปิดข้อความ
+      </button>
+    </div>
+  </header>
 
-        function saveApiKey() {
-            const key = document.getElementById('apiKeyInput').value.trim();
-            if (!key) {
-                showAlert('กรุณากรอก API Key', 'error');
-                return;
-            }
-            localStorage.setItem('BP_GEMINI_API_KEY_LOCAL', key);
-            showAlert('บันทึก API Key ลงเครื่องเรียบร้อยแล้ว', 'success');
+  <!-- ================= STEP 1: UPLOAD & CONFIRM BATCH SCAN ================= -->
+  <section class="neu-card p-6 flex flex-col gap-5">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <span class="w-7 h-7 rounded-full neu-btn-confirm text-xs font-extrabold flex items-center justify-center">1</span>
+        <h2 class="text-base font-extrabold text-slate-800">อัปโหลดรูปใบ OPD</h2>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="upload-counter-badge" class="font-mono-num text-xs font-bold px-4 py-1 rounded-full neu-input text-indigo-700">
+          0 / 20 รูป
+        </span>
+        <button
+          id="btn-clear-files"
+          onclick="clearAllFiles()"
+          class="hidden neu-btn px-4 py-1 text-xs font-bold text-rose-600"
+        >
+          ล้างรายการ
+        </button>
+      </div>
+    </div>
+
+    <!-- Dropzone -->
+    <label
+      for="file-input"
+      id="dropzone-area"
+      ondragover="onDragOver(event)"
+      ondragleave="onDragLeave(event)"
+      ondrop="onDropFiles(event)"
+      class="neu-well p-6 flex flex-col items-center justify-center text-center cursor-pointer border-2 border-dashed border-indigo-300/80 hover:border-indigo-500 transition-all min-h-[140px]"
+    >
+      <div class="w-11 h-11 rounded-2xl neu-btn-confirm flex items-center justify-center mb-2">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+        </svg>
+      </div>
+      <p class="text-sm font-bold text-slate-800">แตะเพื่อเลือกรูปใบ OPD หรือลากรูปมาวาง</p>
+      <p class="text-xs text-[#7181a6] mt-0.5">อัปโหลดพร้อมกันสูงสุด 20 รูปต่อรอบ</p>
+      <input
+        id="file-input"
+        type="file"
+        multiple
+        accept="image/*"
+        class="hidden"
+        onchange="onFileInputChange(event)"
+      />
+    </label>
+
+    <!-- Compact Thumbnail Strip -->
+    <div id="thumbnails-grid" class="hidden grid-cols-2 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-3"></div>
+
+    <!-- Batch Scan Progress Bar -->
+    <div id="scan-progress-box" class="hidden flex-col gap-1.5">
+      <div class="flex items-center justify-between text-xs font-mono-num">
+        <span id="scan-progress-label" class="font-bold text-indigo-700">กำลังประมวลผล Batch OCR (Gemini 4 Hydrogen)...</span>
+        <span id="scan-progress-pct" class="font-bold text-slate-700">0%</span>
+      </div>
+      <div class="w-full h-3 rounded-full neu-well p-0.5 overflow-hidden">
+        <div id="scan-progress-bar" class="h-full rounded-full progress-shimmer transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Primary CTA 1: Confirm Scan -->
+    <div class="flex justify-end">
+      <button
+        id="btn-confirm-scan"
+        onclick="confirmStartBatchScan()"
+        disabled
+        class="neu-btn-confirm w-full sm:w-auto min-w-[260px] py-3.5 px-8 text-sm font-extrabold flex items-center justify-center gap-2.5"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+        <span id="btn-confirm-scan-text">1. Confirm สแกนข้อมูล</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2: RESULTS TABLE, IMAGE PREVIEW & CONFIRM GSHEET ================= -->
+  <section id="step2-results-section" class="hidden neu-card p-6 flex-col gap-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <span class="w-7 h-7 rounded-full neu-btn-confirm text-xs font-extrabold flex items-center justify-center">2</span>
+        <h2 class="text-base font-extrabold text-slate-800">ตรวจสอบผลลัพธ์และกด Confirm ส่งเข้า Google Sheets</h2>
+      </div>
+      <span id="results-count-badge" class="font-mono-num text-xs font-bold px-4 py-1 rounded-full neu-input text-emerald-700">
+        0 รายการ
+      </span>
+    </div>
+
+    <!-- Split Workspace: Compact Selected Image Inspector + 9-Column Editable Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+
+      <!-- Left/Top Inspector Card: Shows currently selected row's OPD image -->
+      <div class="lg:col-span-4 neu-well p-3.5 flex flex-col gap-2.5">
+        <div class="flex items-center justify-between px-1">
+          <span id="inspector-caption" class="text-xs font-bold font-mono-num text-slate-700 truncate">ภาพใบ OPD ที่เลือก</span>
+          <button
+            onclick="openImageLightbox(activeInspectId)"
+            class="neu-btn px-3 py-1 text-[11px] font-bold text-indigo-700"
+          >
+            ขยายเต็มจอ
+          </button>
+        </div>
+        <div class="rounded-2xl overflow-hidden bg-slate-900/5 flex items-center justify-center min-h-[220px] max-h-[300px]">
+          <img
+            id="inspector-img"
+            src=""
+            alt="OPD Preview"
+            onclick="openImageLightbox(activeInspectId)"
+            class="max-h-[290px] w-auto object-contain cursor-zoom-in transition-transform duration-200 hover:scale-[1.02]"
+          />
+        </div>
+      </div>
+
+      <!-- Right/Main 9-Column Editable Table -->
+      <div class="lg:col-span-8 neu-well p-3 overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[980px]">
+          <thead>
+            <tr class="border-b border-slate-300/80 text-[11px] font-extrabold text-slate-700">
+              <th class="py-2.5 px-2 w-12 text-center">#</th>
+              <th class="py-2.5 px-1.5 w-32">1. ชื่อ</th>
+              <th class="py-2.5 px-1.5 w-32">2. นามสกุล</th>
+              <th class="py-2.5 px-1 w-14 text-center">3. อายุ</th>
+              <th class="py-2.5 px-1 w-14 text-center">4. เพศ</th>
+              <th class="py-2.5 px-1 w-20 text-center">5. สัญชาติ</th>
+              <th class="py-2.5 px-1.5 w-28">6. วันเกิด (พ.ศ.)</th>
+              <th class="py-2.5 px-1.5 w-28">7. เบอร์โทรศัพท์</th>
+              <th class="py-2.5 px-1.5 w-28">8. วันรับบริการ</th>
+              <th class="py-2.5 px-1.5 min-w-[170px]">9. รายการที่มาทำ</th>
+              <th class="py-2.5 px-1.5 w-10 text-center">ลบ</th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody" class="divide-y divide-slate-200/70 text-xs"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Primary CTA 2: Confirm Send to Google Sheets -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+      <div id="sync-status-banner" class="text-xs font-bold text-[#7181a6]">
+        คลิกที่แถวเพื่อดูรูปเทียบลายมือ หรือแก้ไขข้อความในช่องได้ทันที
+      </div>
+
+      <button
+        id="btn-confirm-gsheet"
+        onclick="confirmSendToGSheet()"
+        class="neu-btn-confirm min-w-[290px] py-3.5 px-8 text-sm font-extrabold flex items-center justify-center gap-2.5"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+        <span id="btn-confirm-gsheet-text">2. Confirm ส่งข้อมูลเข้า Google Sheets</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= FULLSCREEN IMAGE ZOOM MODAL ================= -->
+  <div id="image-lightbox-modal" onclick="closeImageLightbox()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div onclick="event.stopPropagation()" class="neu-card p-4 max-w-3xl w-full flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <span id="lightbox-title" class="text-xs font-bold font-mono-num text-slate-700 truncate">ภาพใบ OPD</span>
+        <button onclick="closeImageLightbox()" class="neu-btn w-8 h-8 text-xs font-extrabold">✕</button>
+      </div>
+      <div class="neu-well p-2 flex items-center justify-center max-h-[80vh] overflow-auto">
+        <img id="lightbox-img" src="" alt="Preview" class="max-h-[75vh] w-auto object-contain rounded-xl" />
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION ================= -->
+  <div id="toast-box" class="fixed bottom-6 right-6 z-50 pointer-events-none opacity-0 translate-y-3 transition-all duration-300">
+    <div class="neu-card px-5 py-3.5 flex items-center gap-3 border-l-4 border-l-indigo-600">
+      <span id="toast-dot" class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+      <p id="toast-text" class="text-xs font-bold text-slate-800"></p>
+    </div>
+  </div>
+
+  <!-- ================= APPLICATION SCRIPT ================= -->
+  <script>
+    // --- LOCALSTORAGE API KEY VAULT + VERTEX AI EXPRESS AUTO-ROUTING ---
+    const LOCAL_KEY_STORAGE_NAME = 'BP_GEMINI_API_KEY_LOCAL';
+    const DEFAULT_VERTEX_API_KEY = 'AQ.Ab8RN6K-_SCDqNUNQuLC2ktPlB0Sou7DEyonL91Uj1qzpqC6zA';
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyHiyXU4KRZI_yfzzUyddkM9650jcOIQgvM7_ALoz9d8qdsVlnJjMLJlpIJx7ikYiDZ/exec';
+
+    const MAX_FILES = 20;
+    const SPREADSHEET_ID = '1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s';
+    const TARGET_TAB = 'raw data';
+
+    // ลำดับโมเดลสำหรับ Vertex AI Publisher Models (`publishers/google/models/...`)
+    const OCR_MODELS_PRIORITY = [
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-2.5-pro',
+      'gemini-4-hydrogen'
+    ];
+
+    const OPD_SYSTEM_PROMPT = `คุณคือระบบ AI OCR ความแม่นยำสูงสำหรับอ่าน "ใบเวชระเบียน (OPD Card)" ของคลินิก Blackpillow และ "บัตรประชาชนไทย (Thai National ID Card)"
+สกัดข้อมูลออกมาเป็น JSON 9 ฟิลด์ตามเงื่อนไขต่อไปนี้อย่างเคร่งครัด (หากช่องใดไม่ได้กรอกหรือขีด "-" ให้ส่งค่า "" ห้ามเกิด Error):
+1. firstName (ชื่อ): ตัดคำนำหน้า K., k., คุณ, นาย, นาง, นางสาว, น.ส., ด.ช., ด.ญ., Mr., Mrs., Ms. ออก เอาเฉพาะชื่อภาษาไทย (เช่น "K. เจนี่" -> "เจนี่", "K. ภัททบงกช มนต์" -> "ภัททบงกช", "นาย ชยธร วิชชุเมธานันท์" -> "ชยธร")
+2. lastName (นามสกุล): หากชื่อและนามสกุลเขียนต่อกันในช่องเดียว ให้แยกนามสกุลมาใส่ใน lastName (เช่น "มนต์", "ศรัณย์วงษ์กร", "วิชชุเมธานันท์") หากมีแต่ชื่อเล่นคำเดียวให้ส่ง ""
+3. age (อายุ): ตัวเลขเท่านั้น เช่น "19", "31", "47" (หากเป็นบัตรประชาชนหรือไม่มีช่องอายุ แต่มีปีเกิด พ.ศ. ให้คำนวณอายุโดยเอา 2569 ลบด้วยปีเกิด พ.ศ. เช่น 2569 - 2537 = "32")
+4. gender (เพศ): ตอบเป็น "ญ" หรือ "ช" (หากเป็นบัตรประชาชนให้ดูจากคำนำหน้าชื่อ เช่น นาย = "ช", นาง/น.ส. = "ญ")
+5. nationality (สัญชาติ): เช่น "ไทย" (หากเป็นบัตรประชาชนไทย ให้ใส่ "ไทย" ทันที หากเป็นใบ OPD ที่ไม่ได้กรอกให้ส่ง "")
+6. dob (วันเดือนปีเกิด): แปลงเป็นรูปแบบ dd/mm/yyyy แบบปี พ.ศ. เสมอ เช่น "30 กค 2550" -> "30/07/2550", "16092522" -> "16/09/2522", "31 ก.ค. 2537" -> "31/07/2537" หากไม่ได้กรอกให้ส่ง ""
+7. phone (เบอร์โทรศัพท์): ตัวเลข 10 หลักติดกันรูปแบบ 0xxxxxxxxx เช่น "0993289151" หากไม่ได้กรอกให้ส่ง ""
+8. serviceDate (วันเดือนปีที่เข้ารับบริการ): รูปแบบ dd/mm/yyyy แบบปี พ.ศ. ตรวจสอบทั้งช่อง "วันที่เข้ารับการบริการ", คอลัมน์ "วัน เดือน ปี" ในตาราง และช่อง "HN. BLACKPILLOW" มุมขวาบน (เช่น "21/07/69" -> "21/07/2569", "30/8/69" -> "30/08/2569") หากไม่มีให้ส่ง ""
+9. treatment (รายการที่มาทำ): อ่านจากหัวข้อ "Treatment :" หรือคอลัมน์ "อาการและการรักษา" เช่น "Hifu 450u", "Hifu 500 ชอต.", "Fat 40 ml = 2,400" หากไม่มีให้ส่ง ""`;
+
+    const ITEM_SCHEMA = {
+      type: 'OBJECT',
+      properties: {
+        firstName: { type: 'STRING' },
+        lastName: { type: 'STRING' },
+        age: { type: 'STRING' },
+        gender: { type: 'STRING' },
+        nationality: { type: 'STRING' },
+        dob: { type: 'STRING' },
+        phone: { type: 'STRING' },
+        serviceDate: { type: 'STRING' },
+        treatment: { type: 'STRING' }
+      },
+      required: ['firstName', 'lastName', 'age', 'gender', 'nationality', 'dob', 'phone', 'serviceDate', 'treatment']
+    };
+
+    let queueItems = [];
+    let activeInspectId = null;
+    let isScanning = false;
+
+    // --- 0. LOCALSTORAGE API KEY & VERTEX ENDPOINT BUILDER ---
+    function isVertexKey(apiKey) {
+      return String(apiKey || '').trim().startsWith('AQ.');
+    }
+
+    function buildEndpointUrlsForModel(modelName, apiKey) {
+      const cleanKey = encodeURIComponent(String(apiKey || '').trim());
+      if (isVertexKey(apiKey)) {
+        // คีย์ AQ.... ยิงเข้า Vertex AI Express Mode Endpoint (aiplatform.googleapis.com) โดยตรง
+        return [
+          `https://aiplatform.googleapis.com/v1/publishers/google/models/${modelName}:generateContent?key=${cleanKey}`,
+          `https://aiplatform.googleapis.com/v1beta1/publishers/google/models/${modelName}:generateContent?key=${cleanKey}`
+        ];
+      }
+      // คีย์ AIza... ยิงเข้า Google AI Studio Endpoint พร้อม fallback ไป Vertex AI
+      return [
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${cleanKey}`,
+        `https://aiplatform.googleapis.com/v1/publishers/google/models/${modelName}:generateContent?key=${cleanKey}`
+      ];
+    }
+
+    function initLocalApiKey() {
+      let savedKey = (localStorage.getItem(LOCAL_KEY_STORAGE_NAME) || '').trim();
+      if (!savedKey) {
+        savedKey = DEFAULT_VERTEX_API_KEY;
+        localStorage.setItem(LOCAL_KEY_STORAGE_NAME, savedKey);
+      }
+      const input = document.getElementById('local-api-key-input');
+      if (input) {
+        input.value = savedKey;
+      }
+      updateKeyStatusBadge(savedKey);
+    }
+
+    function getActiveApiKey() {
+      const inputVal = (document.getElementById('local-api-key-input')?.value || '').trim();
+      if (inputVal) {
+        localStorage.setItem(LOCAL_KEY_STORAGE_NAME, inputVal);
+        updateKeyStatusBadge(inputVal);
+        return inputVal;
+      }
+      const stored = (localStorage.getItem(LOCAL_KEY_STORAGE_NAME) || '').trim();
+      return stored || DEFAULT_VERTEX_API_KEY;
+    }
+
+    function onApiKeyInputTyping() {
+      const val = (document.getElementById('local-api-key-input').value || '').trim();
+      if (val) {
+        localStorage.setItem(LOCAL_KEY_STORAGE_NAME, val);
+      }
+      updateKeyStatusBadge(val);
+      hideApiErrorBanner();
+    }
+
+    function saveApiKeyToLocal() {
+      const val = (document.getElementById('local-api-key-input').value || '').trim();
+      if (!val) {
+        showToast('กรุณาวาง API Key ก่อนกดบันทึก', true);
+        return;
+      }
+      localStorage.setItem(LOCAL_KEY_STORAGE_NAME, val);
+      updateKeyStatusBadge(val);
+      hideApiErrorBanner();
+      const modeName = isVertexKey(val) ? 'Vertex AI (aiplatform.googleapis.com)' : 'AI Studio (generativelanguage)';
+      showToast(`บันทึก Key ลงเครื่องแล้ว • โหมด ${modeName}`);
+    }
+
+    function resetDefaultVertexKey() {
+      localStorage.setItem(LOCAL_KEY_STORAGE_NAME, DEFAULT_VERTEX_API_KEY);
+      document.getElementById('local-api-key-input').value = DEFAULT_VERTEX_API_KEY;
+      updateKeyStatusBadge(DEFAULT_VERTEX_API_KEY);
+      hideApiErrorBanner();
+      showToast('คืนค่า Vertex AI Key (AQ.Ab8...) เรียบร้อยแล้ว');
+    }
+
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById('local-api-key-input');
+      const btn = document.getElementById('btn-toggle-key-vis');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'ซ่อน';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'แสดง';
+      }
+    }
+
+    function updateKeyStatusBadge(key) {
+      const pill = document.getElementById('key-status-pill');
+      const dot = document.getElementById('key-status-dot');
+      const text = document.getElementById('key-status-text');
+      const routeBadge = document.getElementById('endpoint-route-badge');
+
+      if (key && key.length >= 10) {
+        const vertexMode = isVertexKey(key);
+        pill.className = 'px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-emerald-700 flex items-center gap-1.5';
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        text.textContent = vertexMode
+          ? 'Vertex AI Key พร้อมใช้งาน (Local)'
+          : 'AI Studio Key พร้อมใช้งาน (Local)';
+        if (routeBadge) {
+          routeBadge.textContent = vertexMode
+            ? 'Endpoint: aiplatform.googleapis.com'
+            : 'Endpoint: generativelanguage.googleapis.com';
         }
+      } else {
+        pill.className = 'px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-amber-700 flex items-center gap-1.5';
+        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+        text.textContent = 'ยังไม่ได้ใส่ API Key';
+      }
+    }
 
-        async function testApiKey() {
-            const key = document.getElementById('apiKeyInput').value.trim();
-            if (!key) {
-                showAlert('กรุณากรอก API Key ก่อนทดสอบ', 'error');
-                return;
-            }
-            showAlert('กำลังทดสอบการเชื่อมต่อโมเดล Gemini 4 Hydrogen...', 'info');
-            
-            try {
-                const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-4-hydrogen:generateContent?key=${encodeURIComponent(key)}`;
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Ping' }] }] })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showAlert('เชื่อมต่อ Gemini 4 Hydrogen สำเร็จ พร้อมใช้งาน', 'success');
-                } else {
-                    showAlert('เกิดข้อผิดพลาด: ' + (data.error?.message || JSON.stringify(data)), 'error');
-                }
-            } catch (err) {
-                showAlert('เชื่อมต่อล้มเหลว: ' + err.message, 'error');
-            }
-        }
+    function showApiErrorBanner(msg) {
+      const banner = document.getElementById('api-error-banner');
+      const msgEl = document.getElementById('api-error-message');
+      msgEl.innerHTML = msg;
+      banner.classList.remove('hidden');
+      banner.classList.add('flex');
+    }
 
-        function showAlert(msg, type) {
-            const box = document.getElementById('alertBox');
-            box.classList.remove('hidden', 'bg-emerald-100', 'text-emerald-800', 'bg-red-100', 'text-red-800', 'bg-blue-100', 'text-blue-800');
-            if (type === 'success') box.classList.add('bg-emerald-100', 'text-emerald-800');
-            else if (type === 'error') box.classList.add('bg-red-100', 'text-red-800');
-            else box.classList.add('bg-blue-100', 'text-blue-800');
-            box.textContent = msg;
-        }
+    function hideApiErrorBanner() {
+      const banner = document.getElementById('api-error-banner');
+      banner.classList.add('hidden');
+      banner.classList.remove('flex');
+    }
 
-        const dropZone = document.getElementById('dropZone');
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50/50'); });
-        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-indigo-500', 'bg-indigo-50/50'); });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50/50');
-            if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
-        });
+    async function testLocalApiKey() {
+      const apiKey = getActiveApiKey();
+      if (!apiKey) {
+        showToast('กรุณาวาง API Key ในช่องด้านบนก่อนทดสอบ', true);
+        document.getElementById('local-api-key-input').focus();
+        return;
+      }
 
-        function handleFiles(files) {
-            const remainingSlots = 20 - uploadedFiles.length;
-            const filesToAdd = Array.from(files).slice(0, remainingSlots);
-            
-            let loadedCount = 0;
-            filesToAdd.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const base64Full = e.target.result;
-                    const mimeType = base64Full.substring(base64Full.indexOf(':') + 1, base64Full.indexOf(';'));
-                    const base64Data = base64Full.split(',')[1];
-                    
-                    uploadedFiles.push({
-                        file: file,
-                        base64: base64Data,
-                        mimeType: mimeType,
-                        dataUrl: base64Full,
-                        scannedData: null
-                    });
-                    
-                    loadedCount++;
-                    if (loadedCount === filesToAdd.length) {
-                        updateUIState();
-                    }
-                };
-                reader.readAsDataURL(file);
+      const btn = document.getElementById('btn-test-key');
+      btn.disabled = true;
+      btn.textContent = 'กำลังเชื่อมต่อไปยัง Vertex AI...';
+      hideApiErrorBanner();
+
+      try {
+        const testModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        let connectedModel = null;
+        let lastErrorDetail = '';
+
+        for (const model of testModels) {
+          const urls = buildEndpointUrlsForModel(model, apiKey);
+          for (const url of urls) {
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: 'ตอบคำว่า OK' }] }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 10 }
+              })
             });
-        }
 
-        function updateUIState() {
-            document.getElementById('fileCountText').textContent = `${uploadedFiles.length} / 20 รูป`;
-            const scanBtn = document.getElementById('scanBtn');
-            if (uploadedFiles.length > 0) {
-                scanBtn.disabled = false;
-                scanBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            if (res.ok) {
+              connectedModel = model;
+              break;
             } else {
-                scanBtn.disabled = true;
-                scanBtn.classList.add('opacity-50', 'cursor-not-allowed');
+              const errJson = await res.json().catch(() => ({}));
+              lastErrorDetail = errJson?.error?.message || `HTTP ${res.status}`;
             }
-
-            const container = document.getElementById('thumbnailContainer');
-            container.innerHTML = '';
-            uploadedFiles.forEach((item, idx) => {
-                const div = document.createElement('div');
-                div.className = 'relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 border-indigo-200 shadow-sm cursor-pointer';
-                div.innerHTML = `
-                    <img src="${item.dataUrl}" class="w-full h-full object-cover" onclick="inspectImage(${idx})">
-                    <button onclick="removeFile(${idx}); event.stopPropagation();" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
-                    <div class="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[10px] text-center">#${idx+1}</div>
-                `;
-                container.appendChild(div);
-            });
+          }
+          if (connectedModel) break;
         }
 
-        function removeFile(idx) {
-            uploadedFiles.splice(idx, 1);
-            updateUIState();
-            if (uploadedFiles.length === 0) {
-                document.getElementById('resultTableBody').innerHTML = `<tr><td colspan="10" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลผลการสแกน</td></tr>`;
-                document.getElementById('resultCountText').textContent = `0 รายการ`;
-                document.getElementById('submitBtn').disabled = true;
-                document.getElementById('submitBtn').classList.add('opacity-50', 'cursor-not-allowed');
-            }
+        if (connectedModel) {
+          showToast(`✓ เชื่อมต่อ Vertex AI (${connectedModel}) สำเร็จ! พร้อมสแกนใบ OPD ทันที`);
+        } else {
+          showApiErrorBanner(`<strong>ไม่สามารถเรียกใช้งาน API ได้ (${escapeHtml(lastErrorDetail)}):</strong> กรุณาตรวจสอบสิทธิ์ของคีย์ใน Google Cloud Console (โปรเจกต์ 454180601530) ว่าเปิดใช้งาน Vertex AI API แล้ว`);
+          showToast('การทดสอบไม่ผ่าน กรุณาดูรายละเอียดด้านบน', true);
+        }
+      } catch (err) {
+        showApiErrorBanner(`ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Vertex AI ได้: ${escapeHtml(err.message)}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'ทดสอบ Key (Vertex AI)';
+      }
+    }
+    // --- 3. DIRECT BROWSER BATCH / PARALLEL OCR ENGINE (VERTEX AI ENDPOINT) ---
+    async function confirmStartBatchScan() {
+      if (isScanning || queueItems.length === 0) return;
+
+      const apiKey = getActiveApiKey();
+      if (!apiKey) {
+        showApiErrorBanner('<strong>ยังไม่ได้ใส่ API Key:</strong> กรุณาวาง API Key ในช่องด้านบนแล้วกด <strong>บันทึก Key ลงเครื่อง</strong> ก่อนเริ่มสแกน');
+        showToast('กรุณาใส่ API Key ในช่องด้านบนก่อนสแกน', true);
+        document.getElementById('local-api-key-input').focus();
+        return;
+      }
+
+      hideApiErrorBanner();
+      isScanning = true;
+      renderStep1Queue();
+
+      const progressBox = document.getElementById('scan-progress-box');
+      const progressLabel = document.getElementById('scan-progress-label');
+      const progressPct = document.getElementById('scan-progress-pct');
+      const progressBar = document.getElementById('scan-progress-bar');
+
+      progressBox.classList.remove('hidden');
+      progressBox.classList.add('flex');
+      progressLabel.textContent = `กำลังสแกน ${queueItems.length} รูปผ่าน Vertex AI (aiplatform.googleapis.com)...`;
+      progressPct.textContent = '12%';
+      progressBar.style.width = '12%';
+
+      try {
+        let completed = 0;
+        const total = queueItems.length;
+        const results = new Array(total);
+        const CONCURRENCY = 4;
+
+        // ประมวลผลแบบ Parallel Batch (Concurrency 4 รูปพร้อมกัน)
+        for (let start = 0; start < total; start += CONCURRENCY) {
+          const slice = queueItems.slice(start, start + CONCURRENCY);
+          await Promise.all(
+            slice.map(async (item, offset) => {
+              const idx = start + offset;
+              const extracted = await scanSingleImageWithFallback(item, apiKey);
+              results[idx] = extracted;
+              completed++;
+              const pct = Math.min(98, Math.round((completed / total) * 100));
+              progressLabel.textContent = `กำลังอ่านข้อมูลผ่าน Vertex AI (${completed}/${total} รูป)...`;
+              progressPct.textContent = `${pct}%`;
+              progressBar.style.width = `${pct}%`;
+            })
+          );
         }
 
-        function clearAll() {
-            uploadedFiles = [];
-            updateUIState();
-            document.getElementById('resultTableBody').innerHTML = `<tr><td colspan="10" class="text-center py-8 text-slate-400">ยังไม่มีข้อมูลผลการสแกน</td></tr>`;
-            document.getElementById('resultCountText').textContent = `0 รายการ`;
-            document.getElementById('submitBtn').disabled = true;
-            document.getElementById('submitBtn').classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('previewInspector').innerHTML = 'คลิกแถวในตารางเพื่อดูรูปต้นฉบับ';
+        let successCount = 0;
+        let lastErrorMessage = '';
+
+        results.forEach((res, idx) => {
+          if (res && res.__error) {
+            lastErrorMessage = res.__error;
+            queueItems[idx].error = true;
+            queueItems[idx].scanned = true;
+          } else if (res) {
+            queueItems[idx].data = normalizeRecord(res);
+            queueItems[idx].error = false;
+            queueItems[idx].scanned = true;
+            successCount++;
+          }
+        });
+
+        if (successCount === 0 && lastErrorMessage) {
+          showApiErrorBanner(`<strong>สแกนไม่สำเร็จ (${escapeHtml(lastErrorMessage)}):</strong> ระบบส่งคำขอไปที่ <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">aiplatform.googleapis.com</code> แล้วแต่ถูกปฏิเสธ กรุณาตรวจสอบสิทธิ์ของ API Key`);
+          showToast('สแกนไม่สำเร็จ กรุณาตรวจสอบข้อความแจ้งเตือนด้านบน', true);
+        } else {
+          showToast(`สแกนสำเร็จ ${successCount}/${total} รูป! ตรวจสอบผลแล้วกด Confirm ส่งเข้า Google Sheets`);
         }
+      } catch (err) {
+        console.error('Batch Scan Error:', err);
+        showApiErrorBanner(`เกิดข้อผิดพลาดในการสแกน: ${escapeHtml(err.message)}`);
+      }
 
-        function inspectImage(idx) {
-            const item = uploadedFiles[idx];
-            if (!item) return;
-            const inspector = document.getElementById('previewInspector');
-            inspector.innerHTML = `
-                <div class="space-y-2">
-                    <p class="text-xs font-semibold text-slate-700">รูปที่ #${idx+1} (${item.file.name})</p>
-                    <img src="${item.dataUrl}" class="max-h-48 rounded-lg mx-auto shadow object-contain">
-                </div>
-            `;
-        }
+      progressLabel.textContent = `ประมวลผลเสร็จสิ้น (${queueItems.length} รูป)`;
+      progressPct.textContent = '100%';
+      progressBar.style.width = '100%';
 
-        async function startScanBatch() {
-            const key = localStorage.getItem('BP_GEMINI_API_KEY_LOCAL') || document.getElementById('apiKeyInput').value.trim();
-            if (!key) {
-                showAlert('กรุณากรอก API Key ก่อนสแกน', 'error');
-                return;
-            }
+      isScanning = false;
+      if (!activeInspectId && queueItems.length > 0) {
+        activeInspectId = queueItems[0].id;
+      }
 
-            const scanBtn = document.getElementById('scanBtn');
-            scanBtn.textContent = 'กำลังสแกนด้วย Gemini 4 Hydrogen...';
-            scanBtn.disabled = true;
+      renderStep1Queue();
+      renderStep2Results();
 
-            const systemPrompt = `คุณคือระบบ AI OCR ความแม่นยำสูงของคลินิก Blackpillow ใช้โมเดล Gemini 4 Hydrogen เท่านั้น
-สกัดข้อมูลจากภาพ "ใบเวชระเบียน (OPD Card)" หรือ "บัตรประชาชน (Thai National ID Card)" ออกมาเป็น JSON 9 ฟิลด์:
-1. firstName (ชื่อ): ตัดคำนำหน้า K., คุณ, นาย, นาง, นางสาว, น.ส., ด.ช., ด.ญ. ออก เอาเฉพาะชื่อภาษาไทย
-2. lastName (นามสกุล): แยกนามสกุลภาษาไทย หากมีแต่ชื่อเล่นให้ส่ง ""
-3. age (อายุ): ตัวเลข หากไม่มีให้คำนวณจาก พ.ศ. ปัจจุบัน (2569) ลบด้วยปีเกิด พ.ศ.
-4. gender (เพศ): "ญ" หรือ "ช"
-5. nationality (สัญชาติ): เช่น "ไทย"
-6. dob (วันเดือนปีเกิด): dd/mm/yyyy พ.ศ. เช่น 31/07/2537
-7. phone (เบอร์โทรศัพท์): 0xxxxxxxxx หากไม่มีให้ส่ง ""
-8. serviceDate (วันเดือนปีที่เข้ารับบริการ): dd/mm/yyyy พ.ศ.
-9. treatment (รายการที่มาทำ): อ่านจาก Treatment หรืออาการและการรักษา`;
+      setTimeout(() => {
+        progressBox.classList.add('hidden');
+        progressBox.classList.remove('flex');
+      }, 1200);
 
-            const itemSchema = {
-                type: 'OBJECT',
-                properties: {
-                    firstName: { type: 'STRING' },
-                    lastName: { type: 'STRING' },
-                    age: { type: 'STRING' },
-                    gender: { type: 'STRING' },
-                    nationality: { type: 'STRING' },
-                    dob: { type: 'STRING' },
-                    phone: { type: 'STRING' },
-                    serviceDate: { type: 'STRING' },
-                    treatment: { type: 'STRING' }
-                }
+      document.getElementById('step2-results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function scanSingleImageWithFallback(item, apiKey) {
+      let lastErrText = '';
+
+      for (const modelName of OCR_MODELS_PRIORITY) {
+        const endpointUrls = buildEndpointUrlsForModel(modelName, apiKey);
+
+        for (const url of endpointUrls) {
+          try {
+            // โครงสร้าง Payload มาตรฐานสำหรับ Vertex AI (ต้องระบุ role: 'user' และ role: 'system')
+            const payload = {
+              contents: [{
+                role: 'user',
+                parts: [
+                  { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพนี้เป็น JSON ตาม Schema ที่กำหนด:' },
+                  {
+                    inlineData: {
+                      mimeType: item.mimeType || 'image/jpeg',
+                      data: item.base64Data
+                    }
+                  }
+                ]
+              }],
+              systemInstruction: {
+                role: 'system',
+                parts: [{ text: OPD_SYSTEM_PROMPT }]
+              },
+              generationConfig: {
+                temperature: 0.1,
+                responseMimeType: 'application/json',
+                responseSchema: ITEM_SCHEMA
+              }
             };
 
-            // ล็อก Endpoint ไปที่โมเดล gemini-4-hydrogen อย่างเดียว
-            const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-4-hydrogen:generateContent?key=${encodeURIComponent(key)}`;
-
-            for (let i = 0; i < uploadedFiles.length; i++) {
-                const item = uploadedFiles[i];
-                try {
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                role: 'user',
-                                parts: [
-                                    { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพนี้เป็น JSON:' },
-                                    { inlineData: { mimeType: item.mimeType, data: item.base64 } }
-                                ]
-                            }],
-                            systemInstruction: { parts: [{ text: systemPrompt }] },
-                            generationConfig: {
-                                responseMimeType: 'application/json',
-                                responseSchema: itemSchema
-                            }
-                        })
-                    });
-
-                    if (!res.ok) {
-                        const errText = await res.text();
-                        throw new Error(`HTTP ${res.status}: ${errText.substring(0, 150)}`);
-                    }
-
-                    const jsonRes = await res.json();
-                    const rawText = jsonRes?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                    const parsed = JSON.parse(rawText.replace(/```json|```/g, '').trim());
-                    item.scannedData = parsed;
-                } catch (err) {
-                    console.error(`Error scanning item ${i+1}:`, err);
-                    item.scannedData = { firstName: 'Error: ' + err.message, lastName: '', age: '', gender: '', nationality: '', dob: '', phone: '', serviceDate: '', treatment: '' };
-                }
-            }
-
-            scanBtn.textContent = '1. Confirm สแกนข้อมูล (Hydrogen)';
-            scanBtn.disabled = false;
-            renderTable();
-            showAlert('สแกนข้อมูลด้วย Gemini 4 Hydrogen สำเร็จครบทุกรูป', 'success');
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('resultTableBody');
-            tbody.innerHTML = '';
-            
-            uploadedFiles.forEach((item, idx) => {
-                const d = item.scannedData || {};
-                const tr = document.createElement('tr');
-                tr.className = 'border-b border-slate-100 hover:bg-indigo-50/30 cursor-pointer transition';
-                tr.onclick = () => inspectImage(idx);
-                tr.innerHTML = `
-                    <td class="p-2 font-semibold text-slate-500">#${idx+1}</td>
-                    <td class="p-1"><input type="text" value="${d.firstName || ''}" onchange="updateField(${idx}, 'firstName', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.lastName || ''}" onchange="updateField(${idx}, 'lastName', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.age || ''}" onchange="updateField(${idx}, 'age', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.gender || ''}" onchange="updateField(${idx}, 'gender', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.nationality || ''}" onchange="updateField(${idx}, 'nationality', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.dob || ''}" onchange="updateField(${idx}, 'dob', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.phone || ''}" onchange="updateField(${idx}, 'phone', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.serviceDate || ''}" onchange="updateField(${idx}, 'serviceDate', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                    <td class="p-1"><input type="text" value="${d.treatment || ''}" onchange="updateField(${idx}, 'treatment', this.value)" class="w-full bg-white/60 border border-slate-200 rounded px-2 py-1 text-xs"></td>
-                `;
-                tbody.appendChild(tr);
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
             });
 
-            document.getElementById('resultCountText').textContent = `${uploadedFiles.length} รายการ`;
-            const submitBtn = document.getElementById('submitBtn');
-            if (uploadedFiles.length > 0) {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            if (res.ok) {
+              const json = await fetchJsonSafe(res);
+              const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              if (rawText) {
+                const cleaned = rawText.replace(/```json|```/g, '').trim();
+                return JSON.parse(cleaned);
+              }
+            } else {
+              const errBody = await fetchJsonSafe(res);
+              lastErrText = errBody?.error?.message || `HTTP ${res.status}`;
             }
+          } catch (e) {
+            lastErrText = e.message || 'Network error';
+          }
         }
+      }
 
-        function updateField(idx, field, val) {
-            if (uploadedFiles[idx] && uploadedFiles[idx].scannedData) {
-                uploadedFiles[idx].scannedData[field] = val;
+      return { __error: lastErrText || 'ไม่สามารถอ่านข้อมูลจากภาพได้' };
+    }
+
+    async function fetchJsonSafe(res) {
+      try {
+        return await res.json();
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function showApiErrorBanner(msg) {
+      const banner = document.getElementById('api-error-banner');
+      const msgEl = document.getElementById('api-error-message');
+      msgEl.innerHTML = msg;
+      banner.classList.remove('hidden');
+      banner.classList.add('flex');
+    }
+
+    function hideApiErrorBanner() {
+      const banner = document.getElementById('api-error-banner');
+      banner.classList.add('hidden');
+      banner.classList.remove('flex');
+    }
+
+    async function testLocalApiKey() {
+      const apiKey = getActiveApiKey();
+      if (!apiKey) {
+        showToast('กรุณาวาง API Key ในช่องด้านบนก่อนทดสอบ', true);
+        document.getElementById('local-api-key-input').focus();
+        return;
+      }
+
+      const btn = document.getElementById('btn-test-key');
+      btn.disabled = true;
+      btn.textContent = 'กำลังทดสอบ...';
+      hideApiErrorBanner();
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'ตอบคำว่า OK' }] }]
+          })
+        });
+
+        if (res.ok) {
+          showToast('✓ API Key ใช้งานได้สมบูรณ์ พร้อมสแกนรูปทันที!');
+        } else {
+          const errJson = await res.json().catch(() => ({}));
+          const detail = errJson?.error?.message || `HTTP ${res.status}`;
+          showApiErrorBanner(`<strong>API Key นี้ใช้งานไม่ได้ (${escapeHtml(detail)}):</strong> คีย์ของ Google Gemini API จะต้องขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code> กรุณากดปุ่มด้านขวาเพื่อสร้างคีย์ฟรีจาก Google AI Studio แล้วนำมาวางใหม่`);
+          showToast('API Key ไม่ถูกต้อง กรุณาดูข้อความแจ้งเตือนด้านบน', true);
+        }
+      } catch (err) {
+        showApiErrorBanner(`ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Gemini ได้: ${escapeHtml(err.message)}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'ทดสอบ Key';
+      }
+    }
+
+    const THAI_MONTHS = {
+      'ม.ค.': '01', 'มค': '01', 'มกราคม': '01',
+      'ก.พ.': '02', 'กพ': '02', 'กุมภาพันธ์': '02',
+      'มี.ค.': '03', 'มีค': '03', 'มีนาคม': '03',
+      'เม.ย.': '04', 'เมย': '04', 'เมษายน': '04',
+      'พ.ค.': '05', 'พค': '05', 'พฤษภาคม': '05',
+      'มิ.ย.': '06', 'มิย': '06', 'มิถุนายน': '06',
+      'ก.ค.': '07', 'กค': '07', 'กรกฎาคม': '07',
+      'ส.ค.': '08', 'สค': '08', 'สิงหาคม': '08',
+      'ก.ย.': '09', 'กย': '09', 'กันยายน': '09',
+      'ต.ค.': '10', 'ตค': '10', 'ตุลาคม': '10',
+      'พ.ย.': '11', 'พย': '11', 'พฤศจิกายน': '11',
+      'ธ.ค.': '12', 'ธค': '12', 'ธันวาคม': '12'
+    };
+
+    // --- 1. DATA NORMALIZATION HELPERS ---
+    function splitAndCleanName(rawFirst, rawLast) {
+      let first = String(rawFirst || '').trim();
+      let last = String(rawLast || '').trim();
+
+      first = first.replace(/^(k\.|K\.|คุณ|นาย|นางสาว|นาง|น\.ส\.|ด\.ช\.|ด\.ญ\.)\s*/i, '').trim();
+      last = last.replace(/^(k\.|K\.|คุณ|นาย|นางสาว|นาง|น\.ส\.|-\s*)\s*/i, '').trim();
+      if (last === '-') last = '';
+
+      if (!last && first.includes(' ')) {
+        const parts = first.split(/\s+/).filter(Boolean);
+        first = parts[0] || '';
+        last = parts.slice(1).join(' ') || '';
+      }
+      return { firstName: first, lastName: last };
+    }
+
+    function formatThaiDateBE(rawDate) {
+      if (!rawDate) return '';
+      let str = String(rawDate).trim();
+      if (!str || str === '-') return '';
+
+      const compact = str.replace(/\s+/g, '');
+      if (/^\d{8}$/.test(compact)) {
+        const dd = compact.slice(0, 2);
+        const mm = compact.slice(2, 4);
+        let yyyy = parseInt(compact.slice(4, 8), 10);
+        if (yyyy < 2400) yyyy += 543;
+        return `${dd}/${mm}/${yyyy}`;
+      }
+
+      for (const [mKey, mVal] of Object.entries(THAI_MONTHS)) {
+        if (str.includes(mKey)) {
+          const nums = str.match(/\d+/g);
+          if (nums && nums.length >= 2) {
+            const dd = nums[0].padStart(2, '0');
+            let yyyy = parseInt(nums[1], 10);
+            if (yyyy < 100) yyyy = yyyy > 75 ? 2400 + yyyy : 2500 + yyyy;
+            else if (yyyy < 2400) yyyy += 543;
+            return `${dd}/${mVal}/${yyyy}`;
+          }
+        }
+      }
+
+      const dateMatch = str.match(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{2,4})/);
+      if (dateMatch) {
+        const dd = dateMatch[1].padStart(2, '0');
+        const mm = dateMatch[2].padStart(2, '0');
+        let yyyy = parseInt(dateMatch[3], 10);
+        if (yyyy < 100) yyyy = yyyy > 75 ? 2400 + yyyy : 2500 + yyyy;
+        else if (yyyy < 2400) yyyy += 543;
+        return `${dd}/${mm}/${yyyy}`;
+      }
+
+      return str;
+    }
+
+    function formatPhone10Digits(rawPhone) {
+      if (!rawPhone) return '';
+      const digits = String(rawPhone).replace(/\D/g, '');
+      if (!digits) return '';
+      if (digits.length === 9 && !digits.startsWith('0')) return '0' + digits;
+      return digits.slice(0, 10);
+    }
+
+    function normalizeRecord(raw) {
+      const parsed = raw || {};
+      const nameObj = splitAndCleanName(parsed.firstName, parsed.lastName);
+      const dobFormatted = formatThaiDateBE(parsed.dob);
+      const srvFormatted = formatThaiDateBE(parsed.serviceDate);
+      const phoneFormatted = formatPhone10Digits(parsed.phone);
+
+      let cleanAge = String(parsed.age || '').replace(/\D/g, '');
+      if (!cleanAge && /^\d{2}\/\d{2}\/25\d{2}$/.test(dobFormatted)) {
+        cleanAge = String(2569 - parseInt(dobFormatted.split('/')[2], 10));
+      }
+
+      return {
+        firstName: nameObj.firstName,
+        lastName: nameObj.lastName,
+        age: cleanAge,
+        gender: String(parsed.gender || '').trim(),
+        nationality: String(parsed.nationality || '').trim(),
+        dob: dobFormatted,
+        phone: phoneFormatted,
+        serviceDate: srvFormatted,
+        treatment: String(parsed.treatment || '').trim()
+      };
+    }
+
+    // --- 2. FILE UPLOAD & CLIENT-SIDE COMPRESSION (MAX 1280PX, JPEG 0.8) ---
+    function onDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('border-indigo-600');
+    }
+
+    function onDragLeave(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('border-indigo-600');
+    }
+
+    function onDropFiles(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('border-indigo-600');
+      const files = Array.from(e.dataTransfer?.files || []);
+      if (files.length) addFilesToQueue(files);
+    }
+
+    function onFileInputChange(e) {
+      const files = Array.from(e.target.files || []);
+      if (files.length) addFilesToQueue(files);
+      e.target.value = '';
+    }
+
+    function compressImageToCanvas(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const dataUrl = ev.target.result;
+          const img = new Image();
+          img.onload = () => {
+            const maxDim = 1280;
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
             }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const jpegUrl = canvas.toDataURL('image/jpeg', 0.8);
+            resolve({
+              previewUrl: jpegUrl,
+              base64Data: jpegUrl.split(',')[1],
+              mimeType: 'image/jpeg'
+            });
+          };
+          img.onerror = () => {
+            resolve({
+              previewUrl: dataUrl,
+              base64Data: String(dataUrl).split(',')[1] || '',
+              mimeType: file.type || 'image/jpeg'
+            });
+          };
+          img.src = dataUrl;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function addFilesToQueue(files) {
+      const slotsLeft = MAX_FILES - queueItems.length;
+      if (slotsLeft <= 0) {
+        showToast(`อัปโหลดได้สูงสุด ${MAX_FILES} รูปต่อครั้ง`, true);
+        return;
+      }
+
+      const selected = files.slice(0, slotsLeft);
+      if (files.length > slotsLeft) {
+        showToast(`ระบบตัดมาให้ ${slotsLeft} รูปแรก (จำกัดสูงสุด ${MAX_FILES} รูป)`, true);
+      }
+
+      for (const file of selected) {
+        const compressed = await compressImageToCanvas(file);
+        const newId = 'opd_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        queueItems.push({
+          id: newId,
+          fileName: file.name,
+          previewUrl: compressed.previewUrl,
+          base64Data: compressed.base64Data,
+          mimeType: compressed.mimeType,
+          scanned: false,
+          data: {
+            firstName: '',
+            lastName: '',
+            age: '',
+            gender: '',
+            nationality: '',
+            dob: '',
+            phone: '',
+            serviceDate: '',
+            treatment: ''
+          }
+        });
+        if (!activeInspectId) activeInspectId = newId;
+      }
+
+      renderStep1Queue();
+    }
+
+    function removeFileItem(id) {
+      queueItems = queueItems.filter(item => item.id !== id);
+      if (activeInspectId === id) {
+        activeInspectId = queueItems[0]?.id || null;
+      }
+      renderStep1Queue();
+      renderStep2Results();
+    }
+
+    function clearAllFiles() {
+      queueItems = [];
+      activeInspectId = null;
+      renderStep1Queue();
+      renderStep2Results();
+    }
+
+    function renderStep1Queue() {
+      const count = queueItems.length;
+      document.getElementById('upload-counter-badge').textContent = `${count} / ${MAX_FILES} รูป`;
+      document.getElementById('btn-confirm-scan-text').textContent = count > 0
+        ? `1. Confirm สแกนข้อมูล (${count} รูป)`
+        : `1. Confirm สแกนข้อมูล`;
+      document.getElementById('btn-confirm-scan').disabled = count === 0 || isScanning;
+
+      const clearBtn = document.getElementById('btn-clear-files');
+      const grid = document.getElementById('thumbnails-grid');
+
+      if (count === 0) {
+        clearBtn.classList.add('hidden');
+        grid.classList.add('hidden');
+        grid.classList.remove('grid');
+        grid.innerHTML = '';
+        return;
+      }
+
+      clearBtn.classList.remove('hidden');
+      grid.classList.remove('hidden');
+      grid.classList.add('grid');
+
+      grid.innerHTML = queueItems.map((item, idx) => `
+        <div class="relative neu-well p-1.5 flex flex-col items-center">
+          <img
+            src="${item.previewUrl}"
+            alt="${escapeHtml(item.fileName)}"
+            onclick="openImageLightbox('${item.id}')"
+            class="w-full h-16 object-cover rounded-xl cursor-pointer"
+          />
+          <span class="text-[10px] font-mono-num font-bold ${item.error ? 'text-rose-600' : 'text-slate-600'} mt-1">
+            #${idx + 1} ${item.scanned ? '✓' : (item.error ? '!' : '')}
+          </span>
+          <button
+            onclick="removeFileItem('${item.id}')"
+            class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold shadow flex items-center justify-center hover:bg-rose-600"
+            title="ลบรูปนี้"
+          >✕</button>
+        </div>
+      `).join('');
+    }
+
+    // --- 3. DIRECT BROWSER BATCH / PARALLEL OCR ENGINE (USING LOCALSTORAGE KEY) ---
+    async function confirmStartBatchScan() {
+      if (isScanning || queueItems.length === 0) return;
+
+      const apiKey = getActiveApiKey();
+      if (!apiKey) {
+        showApiErrorBanner('<strong>ยังไม่ได้ใส่ Gemini API Key:</strong> กรุณาวาง API Key (ขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code>) ในช่องด้านบนแล้วกด <strong>บันทึก Key ลงเครื่อง</strong> ก่อนเริ่มสแกน');
+        showToast('กรุณาใส่ Gemini API Key ในช่องด้านบนก่อนสแกน', true);
+        document.getElementById('local-api-key-input').focus();
+        return;
+      }
+
+      hideApiErrorBanner();
+      isScanning = true;
+      renderStep1Queue();
+
+      const progressBox = document.getElementById('scan-progress-box');
+      const progressLabel = document.getElementById('scan-progress-label');
+      const progressPct = document.getElementById('scan-progress-pct');
+      const progressBar = document.getElementById('scan-progress-bar');
+
+      progressBox.classList.remove('hidden');
+      progressBox.classList.add('flex');
+      progressLabel.textContent = `กำลังสแกน ${queueItems.length} รูปด้วย Gemini OCR...`;
+      progressPct.textContent = '15%';
+      progressBar.style.width = '15%';
+
+      try {
+        let completed = 0;
+        const total = queueItems.length;
+
+        const results = await Promise.all(
+          queueItems.map(async (item) => {
+            const extracted = await scanSingleImageWithFallback(item, apiKey);
+            completed++;
+            const pct = Math.min(98, Math.round((completed / total) * 100));
+            progressLabel.textContent = `กำลังอ่านข้อมูล (${completed}/${total} รูป)...`;
+            progressPct.textContent = `${pct}%`;
+            progressBar.style.width = `${pct}%`;
+            return extracted;
+          })
+        );
+
+        let successCount = 0;
+        let lastErrorMessage = '';
+
+        results.forEach((res, idx) => {
+          if (res && res.__error) {
+            lastErrorMessage = res.__error;
+            queueItems[idx].error = true;
+            queueItems[idx].scanned = true;
+          } else if (res) {
+            queueItems[idx].data = normalizeRecord(res);
+            queueItems[idx].error = false;
+            queueItems[idx].scanned = true;
+            successCount++;
+          }
+        });
+
+        if (successCount === 0 && lastErrorMessage) {
+          showApiErrorBanner(`<strong>สแกนไม่สำเร็จ (${escapeHtml(lastErrorMessage)}):</strong> กรุณาตรวจสอบว่า Gemini API Key ที่ใส่ในช่องด้านบนถูกต้อง (คีย์มาตรฐานจาก Google AI Studio จะขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code>)`);
+          showToast('API Key ปฏิเสธการเชื่อมต่อ กรุณาตรวจสอบข้อความแจ้งเตือนด้านบน', true);
+        } else {
+          showToast(`สแกนสำเร็จ ${successCount}/${total} รูป! ตรวจสอบผลแล้วกด Confirm ส่งเข้า Google Sheets`);
         }
+      } catch (err) {
+        console.error('Batch Scan Error:', err);
+        showApiErrorBanner(`เกิดข้อผิดพลาดในการสแกน: ${escapeHtml(err.message)}`);
+      }
 
-        async function submitToGoogleSheets() {
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.textContent = 'กำลังส่งข้อมูลเข้า Google Sheets...';
-            submitBtn.disabled = true;
+      progressLabel.textContent = `ประมวลผลเสร็จสิ้น (${queueItems.length} รูป)`;
+      progressPct.textContent = '100%';
+      progressBar.style.width = '100%';
 
-            const rows = uploadedFiles.map(item => item.scannedData || {});
+      isScanning = false;
+      if (!activeInspectId && queueItems.length > 0) {
+        activeInspectId = queueItems[0].id;
+      }
 
-            try {
-                const res = await fetch(GAS_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'save_rows', rows: rows })
-                });
+      renderStep1Queue();
+      renderStep2Results();
 
-                showAlert('ส่งข้อมูลเข้า Google Sheets (แท็บ raw data) เรียบร้อยแล้ว!', 'success');
-                submitBtn.textContent = '2. Confirm ส่งข้อมูลเข้า Google Sheets (raw data)';
-                submitBtn.disabled = false;
-            } catch (err) {
-                showAlert('ส่งข้อมูลไม่สำเร็จ: ' + err.message, 'error');
-                submitBtn.textContent = '2. Confirm ส่งข้อมูลเข้า Google Sheets (raw data)';
-                submitBtn.disabled = false;
+      setTimeout(() => {
+        progressBox.classList.add('hidden');
+        progressBox.classList.remove('flex');
+      }, 1200);
+
+      document.getElementById('step2-results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function scanSingleImageWithFallback(item, apiKey) {
+      let lastErrText = '';
+
+      for (const modelName of OCR_MODELS_PRIORITY) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
+          const payload = {
+            contents: [{
+              role: 'user',
+              parts: [
+                { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพนี้เป็น JSON ตาม Schema ที่กำหนด:' },
+                {
+                  inlineData: {
+                    mimeType: item.mimeType || 'image/jpeg',
+                    data: item.base64Data
+                  }
+                }
+              ]
+            }],
+            systemInstruction: {
+              parts: [{ text: OPD_SYSTEM_PROMPT }]
+            },
+            generationConfig: {
+              temperature: 0.1,
+              responseMimeType: 'application/json',
+              responseSchema: ITEM_SCHEMA
             }
+          };
+
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            if (rawText) {
+              const cleaned = rawText.replace(/```json|```/g, '').trim();
+              return JSON.parse(cleaned);
+            }
+          } else {
+            const errBody = await res.json().catch(() => ({}));
+            lastErrText = errBody?.error?.message || `HTTP ${res.status}`;
+            // หาก API Key ผิดชัดเจน (400 API_KEY_INVALID หรือ 403) ไม่ต้องวนลองโมเดลอื่นซ้ำ
+            if (res.status === 400 && lastErrText.toLowerCase().includes('api key')) {
+              break;
+            }
+          }
+        } catch (e) {
+          lastErrText = e.message || 'Network error';
         }
-    </script>
+      }
+
+      return { __error: lastErrText || 'ไม่สามารถอ่านข้อมูลจากภาพได้' };
+    }
+
+    // --- 4. STEP 2: RESULTS TABLE & SIDE-BY-SIDE INSPECTOR ---
+    function selectInspectRow(id) {
+      activeInspectId = id;
+      updateInspectorView();
+      highlightActiveRow();
+    }
+
+    function updateInspectorView() {
+      const item = queueItems.find(i => i.id === activeInspectId) || queueItems.find(i => i.scanned);
+      if (!item) return;
+      activeInspectId = item.id;
+      const idx = queueItems.findIndex(i => i.id === item.id) + 1;
+      document.getElementById('inspector-caption').textContent = `ใบที่ #${idx} • ${item.fileName}`;
+      document.getElementById('inspector-img').src = item.previewUrl;
+    }
+
+    function highlightActiveRow() {
+      const rows = document.querySelectorAll('#results-tbody tr');
+      rows.forEach((tr) => {
+        if (tr.getAttribute('data-row-id') === activeInspectId) {
+          tr.classList.add('row-active');
+        } else {
+          tr.classList.remove('row-active');
+        }
+      });
+    }
+
+    function renderStep2Results() {
+      const section = document.getElementById('step2-results-section');
+      const scannedItems = queueItems.filter(i => i.scanned);
+
+      if (scannedItems.length === 0) {
+        section.classList.add('hidden');
+        section.classList.remove('flex');
+        return;
+      }
+
+      section.classList.remove('hidden');
+      section.classList.add('flex');
+      document.getElementById('results-count-badge').textContent = `${scannedItems.length} รายการ`;
+      document.getElementById('btn-confirm-gsheet-text').textContent = `2. Confirm ส่งข้อมูลเข้า Google Sheets (${scannedItems.length} รายการ)`;
+
+      updateInspectorView();
+
+      const tbody = document.getElementById('results-tbody');
+      tbody.innerHTML = scannedItems.map((item, idx) => {
+        const d = item.data;
+        const isActive = item.id === activeInspectId ? 'row-active' : '';
+        return `
+          <tr
+            data-row-id="${item.id}"
+            onclick="selectInspectRow('${item.id}')"
+            class="hover:bg-white/50 transition-colors cursor-pointer ${isActive}"
+          >
+            <td class="py-2 px-1.5 text-center font-mono-num font-bold text-slate-600">
+              ${idx + 1}
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.firstName)}"
+                placeholder="ชื่อ"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'firstName', this.value)"
+                onblur="autoSplitRowName('${item.id}')"
+                class="neu-cell-input w-full px-3 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.lastName)}"
+                placeholder="-"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'lastName', this.value)"
+                class="neu-cell-input w-full px-3 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.age)}"
+                placeholder="-"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'age', this.value)"
+                class="neu-cell-input font-mono-num text-center w-full px-2 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.gender)}"
+                placeholder="ญ/ช"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'gender', this.value)"
+                class="neu-cell-input text-center w-full px-2 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.nationality)}"
+                placeholder="-"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'nationality', this.value)"
+                class="neu-cell-input text-center w-full px-2.5 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.dob)}"
+                placeholder="dd/mm/yyyy"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'dob', this.value)"
+                onblur="normalizeDateField('${item.id}', 'dob')"
+                class="neu-cell-input font-mono-num w-full px-3 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                maxlength="10"
+                value="${escapeHtml(d.phone)}"
+                placeholder="0xxxxxxxxx"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'phone', this.value)"
+                class="neu-cell-input font-mono-num w-full px-3 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.serviceDate)}"
+                placeholder="dd/mm/yyyy"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'serviceDate', this.value)"
+                onblur="normalizeDateField('${item.id}', 'serviceDate')"
+                class="neu-cell-input font-mono-num w-full px-3 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1">
+              <input
+                type="text"
+                value="${escapeHtml(d.treatment)}"
+                placeholder="รายการที่มาทำ"
+                onfocus="selectInspectRow('${item.id}')"
+                oninput="updateResultField('${item.id}', 'treatment', this.value)"
+                class="neu-cell-input w-full px-3 py-1.5 text-xs font-bold"
+              />
+            </td>
+            <td class="py-2 px-1 text-center">
+              <button
+                onclick="event.stopPropagation(); removeFileItem('${item.id}')"
+                class="neu-btn w-7 h-7 text-xs font-bold text-rose-600 flex items-center justify-center mx-auto"
+                title="ลบแถวนี้"
+              >✕</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateResultField(id, key, val) {
+      const item = queueItems.find(i => i.id === id);
+      if (!item) return;
+      if (key === 'phone') {
+        item.data.phone = String(val).replace(/\D/g, '').slice(0, 10);
+      } else {
+        item.data[key] = val;
+      }
+    }
+
+    function autoSplitRowName(id) {
+      const item = queueItems.find(i => i.id === id);
+      if (!item) return;
+      const res = splitAndCleanName(item.data.firstName, item.data.lastName);
+      if (res.firstName !== item.data.firstName || res.lastName !== item.data.lastName) {
+        item.data.firstName = res.firstName;
+        item.data.lastName = res.lastName;
+        renderStep2Results();
+      }
+    }
+
+    function normalizeDateField(id, key) {
+      const item = queueItems.find(i => i.id === id);
+      if (!item) return;
+      item.data[key] = formatThaiDateBE(item.data[key]);
+      renderStep2Results();
+    }
+
+    // --- 5. STEP 2 CONFIRM: SEND TO GOOGLE SHEETS (`raw data`) ---
+    async function confirmSendToGSheet() {
+      const scannedItems = queueItems.filter(i => i.scanned);
+      if (scannedItems.length === 0) return;
+
+      copyRowsAsTSV(scannedItems);
+
+      const btn = document.getElementById('btn-confirm-gsheet');
+      const btnText = document.getElementById('btn-confirm-gsheet-text');
+      const banner = document.getElementById('sync-status-banner');
+
+      btn.disabled = true;
+      btnText.textContent = 'กำลังส่งข้อมูลเข้า Google Sheets (raw data)...';
+
+      const payload = {
+        action: 'save_rows',
+        spreadsheetId: SPREADSHEET_ID,
+        sheetName: TARGET_TAB,
+        rows: scannedItems.map(item => ({
+          firstName: item.data.firstName || '',
+          lastName: item.data.lastName || '',
+          age: item.data.age || '',
+          gender: item.data.gender || '',
+          nationality: item.data.nationality || '',
+          dob: item.data.dob || '',
+          phone: formatPhone10Digits(item.data.phone),
+          serviceDate: item.data.serviceDate || '',
+          treatment: item.data.treatment || ''
+        }))
+      };
+
+      try {
+        await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        banner.innerHTML = `<span class="text-emerald-700 font-extrabold">✓ ส่งข้อมูล ${scannedItems.length} รายการเข้าแท็บ raw data เรียบร้อยแล้ว!</span>`;
+        showToast(`บันทึก ${scannedItems.length} รายการลง Google Sheets สำเร็จ!`);
+      } catch (err) {
+        banner.innerHTML = `<span class="text-rose-600 font-bold">เกิดข้อผิดพลาดในการเชื่อมต่อ (คัดลอกข้อมูลลงคลิปบอร์ดสำรองให้แล้ว)</span>`;
+        showToast('ส่งข้อมูลไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Deploy ของ Apps Script', true);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = `2. Confirm ส่งข้อมูลเข้า Google Sheets (${scannedItems.length} รายการ)`;
+      }
+    }
+
+    function copyRowsAsTSV(items) {
+      const tsv = items.map(item => {
+        const d = item.data;
+        const phoneText = d.phone ? `'${formatPhone10Digits(d.phone)}` : '';
+        return [
+          d.firstName || '',
+          d.lastName || '',
+          d.age || '',
+          d.gender || '',
+          d.nationality || '',
+          d.dob || '',
+          phoneText,
+          d.serviceDate || '',
+          d.treatment || ''
+        ].join('\t');
+      }).join('\n');
+
+      const ta = document.createElement('textarea');
+      ta.value = tsv;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+
+    // --- 6. UTILITIES ---
+    function openImageLightbox(id) {
+      const targetId = id || activeInspectId;
+      const item = queueItems.find(i => i.id === targetId);
+      if (!item) return;
+      document.getElementById('lightbox-title').textContent = item.fileName;
+      document.getElementById('lightbox-img').src = item.previewUrl;
+      const modal = document.getElementById('image-lightbox-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeImageLightbox() {
+      const modal = document.getElementById('image-lightbox-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function showToast(msg, isWarning = false) {
+      const box = document.getElementById('toast-box');
+      const dot = document.getElementById('toast-dot');
+      document.getElementById('toast-text').textContent = msg;
+      dot.className = isWarning ? 'w-2.5 h-2.5 rounded-full bg-amber-500' : 'w-2.5 h-2.5 rounded-full bg-indigo-600';
+      box.classList.remove('opacity-0', 'translate-y-3');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        box.classList.add('opacity-0', 'translate-y-3');
+      }, 3200);
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // โหลด API Key จาก localStorage ทันทีที่เปิดหน้าเว็บ
+    window.addEventListener('DOMContentLoaded', initLocalApiKey);
+  </script>
 </body>
 </html>
