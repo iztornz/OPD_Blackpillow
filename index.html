@@ -186,19 +186,16 @@
             <h1 class="text-lg font-extrabold tracking-tight text-slate-800">Blackpillow OPD Scanner</h1>
             <span id="key-status-pill" class="px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-emerald-700 flex items-center gap-1.5">
               <span id="key-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span id="key-status-text">Vertex AI • aiplatform.googleapis.com</span>
+              <span id="key-status-text">Vertex AI Key พร้อมใช้งาน (Local)</span>
             </span>
           </div>
           <p class="text-xs text-[#7181a6] mt-1">
-            อัปโหลดรูปสูงสุด 20 รูป &rarr; กด Confirm สแกนข้อมูล (Vertex AI) &rarr; กด Confirm ส่งเข้าแท็บ <span class="font-mono-num font-semibold text-slate-700">raw data</span>
+            อัปโหลดรูปสูงสุด 20 รูป &rarr; กด Confirm สแกนข้อมูล &rarr; กด Confirm ส่งเข้าแท็บ <span class="font-mono-num font-semibold text-slate-700">raw data</span>
           </p>
         </div>
       </div>
 
       <div class="flex items-center gap-2.5 self-end sm:self-auto">
-        <span id="endpoint-route-badge" class="px-3.5 py-2 rounded-full text-[11px] font-mono-num font-extrabold neu-input text-indigo-700">
-          Endpoint: aiplatform.googleapis.com
-        </span>
         <a
           href="https://docs.google.com/spreadsheets/d/1Pm0-pxYRgFVvX_iZvKd663FdaeT93guYwvMIebxVl3s/edit?gid=0#gid=0"
           target="_blank"
@@ -242,14 +239,6 @@
           class="neu-btn px-4 py-2 text-xs font-extrabold text-indigo-700"
         >
           บันทึก Key ลงเครื่อง
-        </button>
-        <button
-          type="button"
-          id="btn-test-key"
-          onclick="testLocalApiKey()"
-          class="neu-btn px-4 py-2 text-xs font-bold text-emerald-700"
-        >
-          ทดสอบ Key (Vertex AI)
         </button>
         <button
           type="button"
@@ -595,7 +584,6 @@
       const pill = document.getElementById('key-status-pill');
       const dot = document.getElementById('key-status-dot');
       const text = document.getElementById('key-status-text');
-      const routeBadge = document.getElementById('endpoint-route-badge');
 
       if (key && key.length >= 10) {
         const vertexMode = isVertexKey(key);
@@ -604,11 +592,6 @@
         text.textContent = vertexMode
           ? 'Vertex AI Key พร้อมใช้งาน (Local)'
           : 'AI Studio Key พร้อมใช้งาน (Local)';
-        if (routeBadge) {
-          routeBadge.textContent = vertexMode
-            ? 'Endpoint: aiplatform.googleapis.com'
-            : 'Endpoint: generativelanguage.googleapis.com';
-        }
       } else {
         pill.className = 'px-3 py-0.5 rounded-full text-[11px] font-mono-num font-bold neu-input text-amber-700 flex items-center gap-1.5';
         dot.className = 'w-2 h-2 rounded-full bg-amber-500';
@@ -630,61 +613,7 @@
       banner.classList.remove('flex');
     }
 
-    async function testLocalApiKey() {
-      const apiKey = getActiveApiKey();
-      if (!apiKey) {
-        showToast('กรุณาวาง API Key ในช่องด้านบนก่อนทดสอบ', true);
-        document.getElementById('local-api-key-input').focus();
-        return;
-      }
-
-      const btn = document.getElementById('btn-test-key');
-      btn.disabled = true;
-      btn.textContent = 'กำลังเชื่อมต่อไปยัง Vertex AI...';
-      hideApiErrorBanner();
-
-      try {
-        const testModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-        let connectedModel = null;
-        let lastErrorDetail = '';
-
-        for (const model of testModels) {
-          const urls = buildEndpointUrlsForModel(model, apiKey);
-          for (const url of urls) {
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: 'ตอบคำว่า OK' }] }],
-                generationConfig: { temperature: 0.1, maxOutputTokens: 10 }
-              })
-            });
-
-            if (res.ok) {
-              connectedModel = model;
-              break;
-            } else {
-              const errJson = await res.json().catch(() => ({}));
-              lastErrorDetail = errJson?.error?.message || `HTTP ${res.status}`;
-            }
-          }
-          if (connectedModel) break;
-        }
-
-        if (connectedModel) {
-          showToast(`✓ เชื่อมต่อ Vertex AI (${connectedModel}) สำเร็จ! พร้อมสแกนใบ OPD ทันที`);
-        } else {
-          showApiErrorBanner(`<strong>ไม่สามารถเรียกใช้งาน API ได้ (${escapeHtml(lastErrorDetail)}):</strong> กรุณาตรวจสอบสิทธิ์ของคีย์ใน Google Cloud Console (โปรเจกต์ 454180601530) ว่าเปิดใช้งาน Vertex AI API แล้ว`);
-          showToast('การทดสอบไม่ผ่าน กรุณาดูรายละเอียดด้านบน', true);
-        }
-      } catch (err) {
-        showApiErrorBanner(`ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Vertex AI ได้: ${escapeHtml(err.message)}`);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'ทดสอบ Key (Vertex AI)';
-      }
-    }
-    // --- 3. DIRECT BROWSER BATCH / PARALLEL OCR ENGINE (VERTEX AI ENDPOINT) ---
+    // --- 3. DIRECT BROWSER BATCH / PARALLEL OCR ENGINE ---
     async function confirmStartBatchScan() {
       if (isScanning || queueItems.length === 0) return;
 
@@ -707,7 +636,7 @@
 
       progressBox.classList.remove('hidden');
       progressBox.classList.add('flex');
-      progressLabel.textContent = `กำลังสแกน ${queueItems.length} รูปผ่าน Vertex AI (aiplatform.googleapis.com)...`;
+      progressLabel.textContent = `กำลังสแกน ${queueItems.length} รูป...`;
       progressPct.textContent = '12%';
       progressBar.style.width = '12%';
 
@@ -727,7 +656,7 @@
               results[idx] = extracted;
               completed++;
               const pct = Math.min(98, Math.round((completed / total) * 100));
-              progressLabel.textContent = `กำลังอ่านข้อมูลผ่าน Vertex AI (${completed}/${total} รูป)...`;
+              progressLabel.textContent = `กำลังอ่านข้อมูล (${completed}/${total} รูป)...`;
               progressPct.textContent = `${pct}%`;
               progressBar.style.width = `${pct}%`;
             })
@@ -751,7 +680,7 @@
         });
 
         if (successCount === 0 && lastErrorMessage) {
-          showApiErrorBanner(`<strong>สแกนไม่สำเร็จ (${escapeHtml(lastErrorMessage)}):</strong> ระบบส่งคำขอไปที่ <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">aiplatform.googleapis.com</code> แล้วแต่ถูกปฏิเสธ กรุณาตรวจสอบสิทธิ์ของ API Key`);
+          showApiErrorBanner(`<strong>สแกนไม่สำเร็จ (${escapeHtml(lastErrorMessage)}):</strong> กรุณาตรวจสอบสิทธิ์ของ API Key`);
           showToast('สแกนไม่สำเร็จ กรุณาตรวจสอบข้อความแจ้งเตือนด้านบน', true);
         } else {
           showToast(`สแกนสำเร็จ ${successCount}/${total} รูป! ตรวจสอบผลแล้วกด Confirm ส่งเข้า Google Sheets`);
@@ -845,59 +774,6 @@
         return await res.json();
       } catch (_) {
         return {};
-      }
-    }
-
-    function showApiErrorBanner(msg) {
-      const banner = document.getElementById('api-error-banner');
-      const msgEl = document.getElementById('api-error-message');
-      msgEl.innerHTML = msg;
-      banner.classList.remove('hidden');
-      banner.classList.add('flex');
-    }
-
-    function hideApiErrorBanner() {
-      const banner = document.getElementById('api-error-banner');
-      banner.classList.add('hidden');
-      banner.classList.remove('flex');
-    }
-
-    async function testLocalApiKey() {
-      const apiKey = getActiveApiKey();
-      if (!apiKey) {
-        showToast('กรุณาวาง API Key ในช่องด้านบนก่อนทดสอบ', true);
-        document.getElementById('local-api-key-input').focus();
-        return;
-      }
-
-      const btn = document.getElementById('btn-test-key');
-      btn.disabled = true;
-      btn.textContent = 'กำลังทดสอบ...';
-      hideApiErrorBanner();
-
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'ตอบคำว่า OK' }] }]
-          })
-        });
-
-        if (res.ok) {
-          showToast('✓ API Key ใช้งานได้สมบูรณ์ พร้อมสแกนรูปทันที!');
-        } else {
-          const errJson = await res.json().catch(() => ({}));
-          const detail = errJson?.error?.message || `HTTP ${res.status}`;
-          showApiErrorBanner(`<strong>API Key นี้ใช้งานไม่ได้ (${escapeHtml(detail)}):</strong> คีย์ของ Google Gemini API จะต้องขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code> กรุณากดปุ่มด้านขวาเพื่อสร้างคีย์ฟรีจาก Google AI Studio แล้วนำมาวางใหม่`);
-          showToast('API Key ไม่ถูกต้อง กรุณาดูข้อความแจ้งเตือนด้านบน', true);
-        }
-      } catch (err) {
-        showApiErrorBanner(`ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ Gemini ได้: ${escapeHtml(err.message)}`);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'ทดสอบ Key';
       }
     }
 
@@ -1170,154 +1046,6 @@
           >✕</button>
         </div>
       `).join('');
-    }
-
-    // --- 3. DIRECT BROWSER BATCH / PARALLEL OCR ENGINE (USING LOCALSTORAGE KEY) ---
-    async function confirmStartBatchScan() {
-      if (isScanning || queueItems.length === 0) return;
-
-      const apiKey = getActiveApiKey();
-      if (!apiKey) {
-        showApiErrorBanner('<strong>ยังไม่ได้ใส่ Gemini API Key:</strong> กรุณาวาง API Key (ขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code>) ในช่องด้านบนแล้วกด <strong>บันทึก Key ลงเครื่อง</strong> ก่อนเริ่มสแกน');
-        showToast('กรุณาใส่ Gemini API Key ในช่องด้านบนก่อนสแกน', true);
-        document.getElementById('local-api-key-input').focus();
-        return;
-      }
-
-      hideApiErrorBanner();
-      isScanning = true;
-      renderStep1Queue();
-
-      const progressBox = document.getElementById('scan-progress-box');
-      const progressLabel = document.getElementById('scan-progress-label');
-      const progressPct = document.getElementById('scan-progress-pct');
-      const progressBar = document.getElementById('scan-progress-bar');
-
-      progressBox.classList.remove('hidden');
-      progressBox.classList.add('flex');
-      progressLabel.textContent = `กำลังสแกน ${queueItems.length} รูปด้วย Gemini OCR...`;
-      progressPct.textContent = '15%';
-      progressBar.style.width = '15%';
-
-      try {
-        let completed = 0;
-        const total = queueItems.length;
-
-        const results = await Promise.all(
-          queueItems.map(async (item) => {
-            const extracted = await scanSingleImageWithFallback(item, apiKey);
-            completed++;
-            const pct = Math.min(98, Math.round((completed / total) * 100));
-            progressLabel.textContent = `กำลังอ่านข้อมูล (${completed}/${total} รูป)...`;
-            progressPct.textContent = `${pct}%`;
-            progressBar.style.width = `${pct}%`;
-            return extracted;
-          })
-        );
-
-        let successCount = 0;
-        let lastErrorMessage = '';
-
-        results.forEach((res, idx) => {
-          if (res && res.__error) {
-            lastErrorMessage = res.__error;
-            queueItems[idx].error = true;
-            queueItems[idx].scanned = true;
-          } else if (res) {
-            queueItems[idx].data = normalizeRecord(res);
-            queueItems[idx].error = false;
-            queueItems[idx].scanned = true;
-            successCount++;
-          }
-        });
-
-        if (successCount === 0 && lastErrorMessage) {
-          showApiErrorBanner(`<strong>สแกนไม่สำเร็จ (${escapeHtml(lastErrorMessage)}):</strong> กรุณาตรวจสอบว่า Gemini API Key ที่ใส่ในช่องด้านบนถูกต้อง (คีย์มาตรฐานจาก Google AI Studio จะขึ้นต้นด้วย <code class="font-mono-num bg-white/80 px-1.5 py-0.5 rounded">AIzaSy...</code>)`);
-          showToast('API Key ปฏิเสธการเชื่อมต่อ กรุณาตรวจสอบข้อความแจ้งเตือนด้านบน', true);
-        } else {
-          showToast(`สแกนสำเร็จ ${successCount}/${total} รูป! ตรวจสอบผลแล้วกด Confirm ส่งเข้า Google Sheets`);
-        }
-      } catch (err) {
-        console.error('Batch Scan Error:', err);
-        showApiErrorBanner(`เกิดข้อผิดพลาดในการสแกน: ${escapeHtml(err.message)}`);
-      }
-
-      progressLabel.textContent = `ประมวลผลเสร็จสิ้น (${queueItems.length} รูป)`;
-      progressPct.textContent = '100%';
-      progressBar.style.width = '100%';
-
-      isScanning = false;
-      if (!activeInspectId && queueItems.length > 0) {
-        activeInspectId = queueItems[0].id;
-      }
-
-      renderStep1Queue();
-      renderStep2Results();
-
-      setTimeout(() => {
-        progressBox.classList.add('hidden');
-        progressBox.classList.remove('flex');
-      }, 1200);
-
-      document.getElementById('step2-results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    async function scanSingleImageWithFallback(item, apiKey) {
-      let lastErrText = '';
-
-      for (const modelName of OCR_MODELS_PRIORITY) {
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
-          const payload = {
-            contents: [{
-              role: 'user',
-              parts: [
-                { text: 'สกัดข้อมูล 9 ฟิลด์จากภาพนี้เป็น JSON ตาม Schema ที่กำหนด:' },
-                {
-                  inlineData: {
-                    mimeType: item.mimeType || 'image/jpeg',
-                    data: item.base64Data
-                  }
-                }
-              ]
-            }],
-            systemInstruction: {
-              parts: [{ text: OPD_SYSTEM_PROMPT }]
-            },
-            generationConfig: {
-              temperature: 0.1,
-              responseMimeType: 'application/json',
-              responseSchema: ITEM_SCHEMA
-            }
-          };
-
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (res.ok) {
-            const json = await res.json();
-            const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (rawText) {
-              const cleaned = rawText.replace(/```json|```/g, '').trim();
-              return JSON.parse(cleaned);
-            }
-          } else {
-            const errBody = await res.json().catch(() => ({}));
-            lastErrText = errBody?.error?.message || `HTTP ${res.status}`;
-            // หาก API Key ผิดชัดเจน (400 API_KEY_INVALID หรือ 403) ไม่ต้องวนลองโมเดลอื่นซ้ำ
-            if (res.status === 400 && lastErrText.toLowerCase().includes('api key')) {
-              break;
-            }
-          }
-        } catch (e) {
-          lastErrText = e.message || 'Network error';
-        }
-      }
-
-      return { __error: lastErrText || 'ไม่สามารถอ่านข้อมูลจากภาพได้' };
     }
 
     // --- 4. STEP 2: RESULTS TABLE & SIDE-BY-SIDE INSPECTOR ---
