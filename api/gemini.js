@@ -10,7 +10,7 @@ export default async function handler(req, res) {
 
   try {
     const { mode, model, payload } = req.body || {};
-    const targetModel = model || 'gemini-2.5-flash';
+    const targetModel = model || 'gemini-4-hydrogen';
     const action = mode === 'batch' ? 'batchGenerateContent' : 'generateContent';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(targetModel)}:${action}?key=${encodeURIComponent(apiKey)}`;
 
